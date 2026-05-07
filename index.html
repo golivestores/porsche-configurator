@@ -1,0 +1,1169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="referrer" content="no-referrer">
+  <title>Porsche 911 Carrera S — Configure Yours</title>
+  <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;1,9..40,300&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --black: #0a0a0a;
+      --surface: #111111;
+      --surface-2: #1a1a1a;
+      --border: rgba(255,255,255,0.08);
+      --text: #f0ede8;
+      --text-muted: rgba(240,237,232,0.45);
+      --red: #D5001C;
+      --chalk: #E8E4D9;
+      --guards-red: #B8001F;
+      --gentian-blue: #1C3D6E;
+      --transition: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--black);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 300;
+      overflow: hidden;
+    }
+
+    /* ── Layout ── */
+    .app {
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      grid-template-rows: 1fr auto;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    /* ── Car Stage ── */
+    .stage {
+      grid-column: 1;
+      grid-row: 1 / 3;
+      position: relative;
+      overflow: hidden;
+      background: var(--black);
+    }
+
+    .stage-bg { display: none; }
+    .stage-floor { display: none; }
+
+    .car-img-wrapper {
+      position: absolute;
+      inset: 0;
+    }
+
+    .car-img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center center;
+      opacity: 0;
+      transition: opacity var(--transition);
+    }
+
+    .car-img.active {
+      opacity: 1;
+    }
+
+    .car-img.fade-out {
+      opacity: 0;
+    }
+
+    /* loading shimmer */
+    .stage-loading {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 200ms;
+      pointer-events: none;
+    }
+
+    .stage-loading.visible { opacity: 1; }
+
+    .loader-ring {
+      width: 32px;
+      height: 32px;
+      border: 1.5px solid rgba(255,255,255,0.1);
+      border-top-color: rgba(255,255,255,0.5);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* corner label */
+    .stage-label {
+      position: absolute;
+      top: 32px;
+      left: 36px;
+      pointer-events: none;
+    }
+
+    .stage-label-model {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(28px, 3vw, 42px);
+      letter-spacing: 0.04em;
+      line-height: 1;
+      color: var(--text);
+    }
+
+    .stage-label-sub {
+      font-size: 11px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* perspective thumbnails */
+    .perspective-bar {
+      position: absolute;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 8px;
+      padding: 6px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      backdrop-filter: blur(12px);
+    }
+
+    .persp-btn {
+      width: 72px;
+      height: 48px;
+      border: 1px solid transparent;
+      border-radius: 3px;
+      overflow: hidden;
+      cursor: pointer;
+      background: var(--surface);
+      position: relative;
+      transition: border-color 200ms, opacity 200ms;
+      opacity: 0.55;
+    }
+
+    .persp-btn.active {
+      border-color: rgba(255,255,255,0.4);
+      opacity: 1;
+    }
+
+    .persp-btn:hover:not(.active) {
+      opacity: 0.8;
+      border-color: rgba(255,255,255,0.15);
+    }
+
+    .persp-thumb {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+    }
+
+    .persp-thumb-placeholder {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .persp-label {
+      position: absolute;
+      bottom: 3px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-size: 8px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.5);
+    }
+
+    /* ── Config Panel ── */
+    .panel {
+      grid-column: 2;
+      grid-row: 1 / 3;
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255,255,255,0.1) transparent;
+    }
+
+    .panel-header {
+      padding: 32px 28px 24px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .panel-header-eyebrow {
+      font-size: 10px;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--red);
+      margin-bottom: 8px;
+    }
+
+    .panel-header-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 30px;
+      letter-spacing: 0.03em;
+      line-height: 1;
+    }
+
+    .panel-header-price {
+      margin-top: 10px;
+      font-size: 13px;
+      color: var(--text-muted);
+      letter-spacing: 0.05em;
+    }
+
+    .panel-header-price span {
+      color: var(--text);
+      font-weight: 400;
+    }
+
+    /* Sections */
+    .config-section {
+      padding: 24px 28px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .section-label {
+      font-size: 9px;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+
+    /* Color swatches */
+    .color-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .color-option {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 10px 12px;
+      border: 1px solid transparent;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: border-color 180ms, background 180ms;
+      position: relative;
+    }
+
+    .color-option:hover {
+      border-color: rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.03);
+    }
+
+    .color-option.active {
+      border-color: rgba(255,255,255,0.3);
+      background: rgba(255,255,255,0.05);
+    }
+
+    .color-swatch {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      position: relative;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.15), 0 2px 8px rgba(0,0,0,0.4);
+    }
+
+    .color-swatch.metallic::after {
+      content: '';
+      position: absolute;
+      inset: 3px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, rgba(255,255,255,0.3) 0%, transparent 60%);
+    }
+
+    .color-info { flex: 1; }
+
+    .color-name {
+      font-size: 13px;
+      font-weight: 400;
+      letter-spacing: 0.02em;
+    }
+
+    .color-type {
+      font-size: 10px;
+      color: var(--text-muted);
+      letter-spacing: 0.05em;
+      margin-top: 2px;
+    }
+
+    .color-check {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 1.5px solid rgba(255,255,255,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: border-color 180ms, background 180ms;
+    }
+
+    .color-option.active .color-check {
+      border-color: var(--text);
+      background: var(--text);
+    }
+
+    .color-check-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--black);
+      opacity: 0;
+      transition: opacity 180ms;
+    }
+
+    .color-option.active .color-check-dot { opacity: 1; }
+
+    /* Wheel options */
+    .wheel-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .wheel-option {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 10px 12px;
+      border: 1px solid transparent;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: border-color 180ms, background 180ms;
+    }
+
+    .wheel-option:hover {
+      border-color: rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.03);
+    }
+
+    .wheel-option.active {
+      border-color: rgba(255,255,255,0.3);
+      background: rgba(255,255,255,0.05);
+    }
+
+    .wheel-thumb-wrap {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      overflow: hidden;
+      flex-shrink: 0;
+      background: var(--surface-2);
+      position: relative;
+    }
+
+    .wheel-thumb {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: opacity 200ms;
+    }
+
+    .wheel-thumb-placeholder {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .wheel-info { flex: 1; }
+
+    .wheel-name {
+      font-size: 13px;
+      font-weight: 400;
+      letter-spacing: 0.02em;
+    }
+
+    .wheel-size {
+      font-size: 10px;
+      color: var(--text-muted);
+      letter-spacing: 0.05em;
+      margin-top: 2px;
+    }
+
+    .wheel-check {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 1.5px solid rgba(255,255,255,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: border-color 180ms, background 180ms;
+    }
+
+    .wheel-option.active .wheel-check {
+      border-color: var(--text);
+      background: var(--text);
+    }
+
+    .wheel-check-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--black);
+      opacity: 0;
+      transition: opacity 180ms;
+    }
+
+    .wheel-option.active .wheel-check-dot { opacity: 1; }
+
+    /* Summary */
+    .config-summary {
+      padding: 20px 28px;
+      flex-shrink: 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 5px 0;
+      font-size: 12px;
+    }
+
+    .summary-label { color: var(--text-muted); }
+    .summary-value { color: var(--text); letter-spacing: 0.03em; }
+
+    .summary-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 10px 0;
+    }
+
+    .summary-total {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 4px 0;
+    }
+
+    .summary-total-label {
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .summary-total-price {
+      font-size: 18px;
+      font-weight: 400;
+      letter-spacing: 0.02em;
+    }
+
+    /* CTA */
+    .panel-cta {
+      padding: 20px 28px 28px;
+      flex-shrink: 0;
+      margin-top: auto;
+    }
+
+    .btn-primary {
+      display: block;
+      width: 100%;
+      padding: 14px;
+      background: var(--text);
+      color: var(--black);
+      border: none;
+      border-radius: 3px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12px;
+      font-weight: 400;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background 200ms, transform 100ms;
+    }
+
+    .btn-primary:hover { background: #e0dcd6; }
+    .btn-primary:active { transform: scale(0.99); }
+
+    .btn-secondary {
+      display: block;
+      width: 100%;
+      margin-top: 10px;
+      padding: 13px;
+      background: transparent;
+      color: var(--text);
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 3px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12px;
+      font-weight: 300;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: border-color 200ms, background 200ms;
+    }
+
+    .btn-secondary:hover {
+      border-color: rgba(255,255,255,0.4);
+      background: rgba(255,255,255,0.04);
+    }
+
+    /* IOD status info */
+    .stage-info {
+      position: absolute;
+      top: 32px;
+      right: 32px;
+      background: rgba(0,0,0,0.5);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 8px 12px;
+      font-size: 10px;
+      color: var(--text-muted);
+      letter-spacing: 0.08em;
+      backdrop-filter: blur(8px);
+      display: none;
+    }
+
+    /* ── Mobile ── */
+    @media (max-width: 860px) {
+      html, body { overflow: auto; }
+
+      .app {
+        grid-template-columns: 1fr;
+        grid-template-rows: 62vw 1fr;
+        height: auto;
+        min-height: 100vh;
+      }
+
+      .stage {
+        grid-column: 1;
+        grid-row: 1;
+      }
+
+      .stage-label { top: 20px; left: 20px; }
+
+      .perspective-bar {
+        bottom: 14px;
+      }
+
+      .panel {
+        grid-column: 1;
+        grid-row: 2;
+        border-left: none;
+        border-top: 1px solid var(--border);
+        overflow: visible;
+      }
+    }
+    /* ── Wheels section header with toggle ── */
+    .section-row-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .spin-toggle-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .spin-toggle-label {
+      font-size: 9px;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      transition: color 200ms;
+    }
+
+    .spin-toggle-wrap:hover .spin-toggle-label {
+      color: var(--text);
+    }
+
+    .spin-toggle {
+      width: 38px;
+      height: 21px;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 11px;
+      position: relative;
+      transition: background 220ms, border-color 220ms;
+      flex-shrink: 0;
+    }
+
+    .spin-toggle.on {
+      background: var(--red);
+      border-color: var(--red);
+    }
+
+    .spin-toggle-knob {
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 15px;
+      height: 15px;
+      background: rgba(255,255,255,0.6);
+      border-radius: 50%;
+      transition: transform 220ms cubic-bezier(0.4,0,0.2,1), background 220ms;
+    }
+
+    .spin-toggle.on .spin-toggle-knob {
+      transform: translateX(17px);
+      background: #fff;
+    }
+
+    /* ── Wheel spin overlays ── */
+    .wheel-spin-overlay {
+      position: absolute;
+      border-radius: 50%;
+      object-fit: cover;
+      pointer-events: none;
+      opacity: 0;
+      z-index: 5;
+      /* mask to circle so the rectangular JPEG looks round */
+      box-shadow: 0 0 0 3px rgba(0,0,0,0.35);
+    }
+
+    .wheel-spin-overlay.spinning {
+      opacity: 1;
+      animation: wheelSpin 0.45s linear infinite;
+    }
+
+    @keyframes wheelSpin {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
+
+  </style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ── Stage ── -->
+  <section class="stage">
+    <div class="stage-bg"></div>
+    <div class="stage-floor"></div>
+
+    <div class="stage-label">
+      <div class="stage-label-model">911 Carrera S</div>
+      <div class="stage-label-sub">2026 · Coupé</div>
+    </div>
+
+    <div class="car-img-wrapper" id="carStage">
+      <!-- Images injected by JS -->
+    </div>
+
+    <!-- Wheel spin overlays (shown when spin mode is on) -->
+    <img class="wheel-spin-overlay" id="wheelOverlayFront" alt="" src="">
+    <img class="wheel-spin-overlay" id="wheelOverlayRear"  alt="" src="">
+
+    <div class="stage-loading" id="stageLoading">
+      <div class="loader-ring"></div>
+    </div>
+
+    <div class="perspective-bar" id="perspBar">
+      <!-- Perspective buttons injected by JS -->
+    </div>
+  </section>
+
+  <!-- ── Config Panel ── -->
+  <aside class="panel">
+
+    <div class="panel-header">
+      <div class="panel-header-eyebrow">Configure Yours</div>
+      <div class="panel-header-title">911 Carrera S</div>
+      <div class="panel-header-price">Starting at <span>$133,000</span></div>
+    </div>
+
+    <!-- Exterior Color -->
+    <div class="config-section">
+      <div class="section-label">Exterior Color</div>
+      <div class="color-grid" id="colorGrid"></div>
+    </div>
+
+    <!-- Wheels -->
+    <div class="config-section">
+      <div class="section-row-header">
+        <div class="section-label" style="margin-bottom:0">Wheels</div>
+        <label class="spin-toggle-wrap" id="spinToggleWrap" title="Animate wheels spinning">
+          <span class="spin-toggle-label">Spin</span>
+          <div class="spin-toggle" id="spinToggle">
+            <div class="spin-toggle-knob"></div>
+          </div>
+        </label>
+      </div>
+      <div class="wheel-grid" id="wheelGrid"></div>
+    </div>
+
+    <!-- Summary -->
+    <div class="config-summary" id="configSummary"></div>
+
+    <!-- CTA -->
+    <div class="panel-cta">
+      <button class="btn-primary">Request a Test Drive</button>
+      <button class="btn-secondary">Save Configuration</button>
+    </div>
+
+  </aside>
+</div>
+
+<script>
+// ── IOD URL Builder ──────────────────────────────────────────────────────────
+
+const BASE_OPTIONS = [
+  "1G8","3S4","4F6","4GP","4UB","5XX",
+  "6I3","6NQ","7AL","9P8","9ZE","EM2","G1F",
+  "IV2","IW3","LGTDRL","PH","Q5A","QR9","QU8","UP9","VC2","Z1S"
+];
+
+function buildIodHash(colorCode, wheelCode, cameraId) {
+  const options = [...BASE_OPTIONS, colorCode, wheelCode].sort();
+  const config = {
+    config: {
+      animations: [],
+      camera: { id: cameraId, options: { variant: "desktop" } },
+      environment: { id: "Oasis", options: {} },
+      lighting: { id: "DAY", options: {} },
+      product: {
+        id: "9921B2",
+        options: { config: options, country: "US", modelYear: 2026 }
+      }
+    },
+    settings: { format: "jpeg", transparent: false }
+  };
+  return LZString.compressToEncodedURIComponent(JSON.stringify(config));
+}
+
+const IOD_BASE = "https://prs.porsche.com/iod";
+
+function iodUrl(colorCode, wheelCode, cameraId) {
+  const hash = buildIodHash(colorCode, wheelCode, cameraId);
+  return `${IOD_BASE}/image/US/9921B2/1/${hash}?clientId=icc`;
+}
+
+function thumbUrl(colorCode, wheelCode, cameraId) {
+  const hash = buildIodHash(colorCode, wheelCode, cameraId);
+  return `${IOD_BASE}/thumbnail/US/9921B2/1/${hash}?clientId=icc`;
+}
+
+// ── Config Data ──────────────────────────────────────────────────────────────
+
+const COLORS = [
+  {
+    id: "0Q",
+    name: "Chalk",
+    type: "Solid",
+    hex: "#E4E0D5",
+    metallic: false,
+    price: 0
+  },
+  {
+    id: "G1",
+    name: "Guards Red",
+    type: "Solid",
+    hex: "#B8001F",
+    metallic: false,
+    price: 0
+  },
+  {
+    id: "45",
+    name: "Gentian Blue",
+    type: "Metallic",
+    hex: "#1C3D6E",
+    metallic: true,
+    price: 820
+  }
+];
+
+const WHEELS = [
+  {
+    id: "58X",
+    name: "Carrera S Wheels",
+    size: '20" / 21"',
+    price: 0,
+    thumb: "wheel-1.jpg"
+  },
+  {
+    id: "58Y",
+    name: "RS Spyder Design",
+    size: '20" / 21"',
+    price: 2840,
+    thumb: "wheel-2.jpg"
+  }
+];
+
+const PERSPECTIVES = [
+  { id: "ext-low-front-left",       label: "Front"    },
+  { id: "ext-low-rear-left",        label: "Rear"     },
+  { id: "ext-low-side-left",        label: "Side"     },
+  { id: "ext-low-front-left-wheel", label: "Wheel"    },
+  { id: "int-front-dashboard",      label: "Interior" }
+];
+
+// ── State ────────────────────────────────────────────────────────────────────
+
+const state = {
+  color: "0Q",
+  wheel: "58X",
+  persp: PERSPECTIVES[0].id
+};
+
+// Preloaded Image cache
+const imgCache = {};
+
+// ── DOM refs ─────────────────────────────────────────────────────────────────
+
+const carStage = document.getElementById("carStage");
+const stageLoading = document.getElementById("stageLoading");
+const perspBar = document.getElementById("perspBar");
+const colorGrid = document.getElementById("colorGrid");
+const wheelGrid = document.getElementById("wheelGrid");
+const configSummary = document.getElementById("configSummary");
+
+// ── Build perspective bar ────────────────────────────────────────────────────
+
+PERSPECTIVES.forEach((p, i) => {
+  const btn = document.createElement("button");
+  btn.className = "persp-btn" + (i === 0 ? " active" : "");
+  btn.dataset.id = p.id;
+
+  // thumbnail image
+  const img = document.createElement("img");
+  img.className = "persp-thumb";
+  img.alt = p.label;
+  // use chalk + default wheels for perspective thumbnails
+  img.src = thumbUrl("0Q", "58X", p.id);
+  img.onerror = () => { img.style.display = "none"; };
+
+  const lbl = document.createElement("span");
+  lbl.className = "persp-label";
+  lbl.textContent = p.label;
+
+  btn.appendChild(img);
+  btn.appendChild(lbl);
+
+  btn.addEventListener("click", () => {
+    state.persp = p.id;
+    document.querySelectorAll(".persp-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    showCar();
+  });
+
+  perspBar.appendChild(btn);
+});
+
+// ── Build color grid ─────────────────────────────────────────────────────────
+
+COLORS.forEach(c => {
+  const opt = document.createElement("div");
+  opt.className = "color-option" + (c.id === state.color ? " active" : "");
+  opt.dataset.id = c.id;
+  opt.innerHTML = `
+    <div class="color-swatch${c.metallic ? " metallic" : ""}" style="background:${c.hex}"></div>
+    <div class="color-info">
+      <div class="color-name">${c.name}</div>
+      <div class="color-type">${c.type}${c.price > 0 ? ` · $${c.price.toLocaleString()}` : ""}</div>
+    </div>
+    <div class="color-check"><div class="color-check-dot"></div></div>
+  `;
+  opt.addEventListener("click", () => {
+    state.color = c.id;
+    document.querySelectorAll(".color-option").forEach(el => el.classList.remove("active"));
+    opt.classList.add("active");
+    showCar();
+    renderSummary();
+  });
+  colorGrid.appendChild(opt);
+});
+
+// ── Build wheel grid ─────────────────────────────────────────────────────────
+
+WHEELS.forEach(w => {
+  const opt = document.createElement("div");
+  opt.className = "wheel-option" + (w.id === state.wheel ? " active" : "");
+  opt.dataset.id = w.id;
+
+  const thumbSrc = w.thumb;
+
+  opt.innerHTML = `
+    <div class="wheel-thumb-wrap">
+      <img class="wheel-thumb" src="${thumbSrc}" alt="${w.name}"
+           onerror="this.style.opacity='0'">
+    </div>
+    <div class="wheel-info">
+      <div class="wheel-name">${w.name}</div>
+      <div class="wheel-size">${w.size}${w.price > 0 ? ` · $${w.price.toLocaleString()}` : ""}</div>
+    </div>
+    <div class="wheel-check"><div class="wheel-check-dot"></div></div>
+  `;
+
+  opt.addEventListener("click", () => {
+    state.wheel = w.id;
+    document.querySelectorAll(".wheel-option").forEach(el => el.classList.remove("active"));
+    opt.classList.add("active");
+    showCar();
+    renderSummary();
+  });
+  wheelGrid.appendChild(opt);
+});
+
+
+// ── Car image display ─────────────────────────────────────────────────────────
+
+function cacheKey(color, wheel, persp) {
+  return `${color}_${wheel}_${persp}`;
+}
+
+function getOrCreateImg(color, wheel, persp) {
+  const key = cacheKey(color, wheel, persp);
+  if (imgCache[key]) return imgCache[key];
+
+  const img = document.createElement("img");
+  img.className = "car-img";
+  img.referrerPolicy = "no-referrer";
+  img.alt = `Porsche 911 - ${color} - ${wheel}`;
+  img.src = iodUrl(color, wheel, persp);
+
+  img.onload = () => {
+    // if this is the current config, show it
+    if (key === cacheKey(state.color, state.wheel, state.persp)) {
+      revealCurrent(key);
+    }
+  };
+
+  img.onerror = () => {
+    img.dataset.failed = "1";
+    if (key === cacheKey(state.color, state.wheel, state.persp)) {
+      stageLoading.classList.remove("visible");
+    }
+  };
+
+  carStage.appendChild(img);
+  imgCache[key] = img;
+  return img;
+}
+
+function revealCurrent(key) {
+  // Hide all
+  Object.entries(imgCache).forEach(([k, img]) => {
+    img.classList.remove("active");
+  });
+  // Show current
+  if (imgCache[key]) {
+    imgCache[key].classList.add("active");
+  }
+  stageLoading.classList.remove("visible");
+}
+
+function showCar() {
+  const { color, wheel, persp } = state;
+  const key = cacheKey(color, wheel, persp);
+
+  const img = getOrCreateImg(color, wheel, persp);
+
+  if (img.complete && !img.dataset.failed) {
+    revealCurrent(key);
+  } else {
+    // show loader, wait for onload
+    stageLoading.classList.add("visible");
+    // hide others immediately
+    Object.entries(imgCache).forEach(([k, i]) => {
+      if (k !== key) i.classList.remove("active");
+    });
+  }
+
+  // Preload adjacent combos
+  preloadNeighbors(color, wheel, persp);
+}
+
+function preloadNeighbors(color, wheel, persp) {
+  COLORS.forEach(c => {
+    WHEELS.forEach(w => {
+      // preload all on current perspective
+      getOrCreateImg(c.id, w.id, persp);
+    });
+  });
+}
+
+// ── Summary ──────────────────────────────────────────────────────────────────
+
+function renderSummary() {
+  const color = COLORS.find(c => c.id === state.color);
+  const wheel = WHEELS.find(w => w.id === state.wheel);
+
+  const basePrice = 133000;
+  const colorPrice = color?.price || 0;
+  const wheelPrice = wheel?.price || 0;
+  const total = basePrice + colorPrice + wheelPrice;
+
+  configSummary.innerHTML = `
+    <div class="summary-row">
+      <span class="summary-label">911 Carrera S Coupé</span>
+      <span class="summary-value">$${basePrice.toLocaleString()}</span>
+    </div>
+    <div class="summary-row">
+      <span class="summary-label">${color?.name || ""}</span>
+      <span class="summary-value">${colorPrice > 0 ? "$" + colorPrice.toLocaleString() : "Included"}</span>
+    </div>
+    <div class="summary-row">
+      <span class="summary-label">${wheel?.name || ""}</span>
+      <span class="summary-value">${wheelPrice > 0 ? "$" + wheelPrice.toLocaleString() : "Included"}</span>
+    </div>
+    <div class="summary-divider"></div>
+    <div class="summary-total">
+      <span class="summary-total-label">Total</span>
+      <span class="summary-total-price">$${total.toLocaleString()}</span>
+    </div>
+  `;
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+
+renderSummary();
+showCar();
+
+// preload all perspective×color×wheel combos in background after a short delay
+setTimeout(() => {
+  PERSPECTIVES.forEach(p => {
+    COLORS.forEach(c => {
+      WHEELS.forEach(w => {
+        getOrCreateImg(c.id, w.id, p.id);
+      });
+    });
+  });
+}, 1500);
+
+// ── Wheel Spin Mode ───────────────────────────────────────────────────────────
+
+const spinToggleEl   = document.getElementById("spinToggle");
+const wheelOverlayF  = document.getElementById("wheelOverlayFront");
+const wheelOverlayR  = document.getElementById("wheelOverlayRear");
+const stageEl        = document.querySelector(".stage");
+
+let spinActive = false;
+
+// Wheel centers and radius in the ext-low-side-left IOD image
+// expressed as fractions of the image's natural dimensions (1920×1080)
+const SIDE_RATIO = 1920 / 1080;
+const WHEEL_POS = {
+  front: { cx: 0.259, cy: 0.605, r: 0.080 },
+  rear:  { cx: 0.728, cy: 0.597, r: 0.080 }
+};
+
+function positionWheelOverlays() {
+  const cw = stageEl.offsetWidth;
+  const ch = stageEl.offsetHeight;
+
+  // Compute rendered image bounds under object-fit:cover
+  let rW, rH, ox, oy;
+  if (cw / ch > SIDE_RATIO) {
+    rW = cw; rH = cw / SIDE_RATIO;
+    ox = 0;  oy = (ch - rH) / 2;
+  } else {
+    rH = ch; rW = ch * SIDE_RATIO;
+    ox = (cw - rW) / 2; oy = 0;
+  }
+
+  function place(el, pos) {
+    const cx = ox + pos.cx * rW;
+    const cy = oy + pos.cy * rH;
+    const r  = pos.r * rH;
+    el.style.left   = (cx - r) + "px";
+    el.style.top    = (cy - r) + "px";
+    el.style.width  = (r * 2)  + "px";
+    el.style.height = (r * 2)  + "px";
+  }
+
+  place(wheelOverlayF, WHEEL_POS.front);
+  place(wheelOverlayR, WHEEL_POS.rear);
+}
+
+function activateSpin() {
+  // Switch to side view
+  const sideId = "ext-low-side-left";
+  state.persp = sideId;
+  document.querySelectorAll(".persp-btn").forEach(b =>
+    b.classList.toggle("active", b.dataset.id === sideId)
+  );
+  showCar();
+
+  // Set wheel image source to the currently selected wheel
+  const activeWheel = WHEELS.find(w => w.id === state.wheel);
+  const src = activeWheel ? activeWheel.thumb : "";
+  wheelOverlayF.src = src;
+  wheelOverlayR.src = src;
+
+  positionWheelOverlays();
+  wheelOverlayF.classList.add("spinning");
+  wheelOverlayR.classList.add("spinning");
+}
+
+function deactivateSpin() {
+  wheelOverlayF.classList.remove("spinning");
+  wheelOverlayR.classList.remove("spinning");
+}
+
+// Toggle click
+spinToggleEl.addEventListener("click", () => {
+  spinActive = !spinActive;
+  spinToggleEl.classList.toggle("on", spinActive);
+  if (spinActive) activateSpin();
+  else deactivateSpin();
+});
+
+// When wheel selection changes while spin is active, update the overlay images
+const origWheelClickHandler = () => {
+  if (spinActive) {
+    const activeWheel = WHEELS.find(w => w.id === state.wheel);
+    const src = activeWheel ? activeWheel.thumb : "";
+    wheelOverlayF.src = src;
+    wheelOverlayR.src = src;
+  }
+};
+document.getElementById("wheelGrid").addEventListener("click", origWheelClickHandler);
+
+// Reposition on resize
+window.addEventListener("resize", () => {
+  if (spinActive) positionWheelOverlays();
+});
+
+// Turn off spin when user manually switches perspective
+document.getElementById("perspBar").addEventListener("click", () => {
+  if (spinActive) {
+    spinActive = false;
+    spinToggleEl.classList.remove("on");
+    deactivateSpin();
+  }
+});
+</script>
+
+</body>
+</html>
