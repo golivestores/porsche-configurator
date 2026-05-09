@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="referrer" content="no-referrer">
-  <title>Porsche 911 Carrera S — Configure Yours</title>
+  <title>Porsche 911 McLaren S — Configure Yours</title>
   <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;1,9..40,300&display=swap" rel="stylesheet">
@@ -69,6 +69,7 @@
       object-position: center center;
       opacity: 0;
       transition: opacity var(--transition);
+      z-index: 2;
     }
 
     .car-img.active {
@@ -76,6 +77,35 @@
     }
 
     .car-img.fade-out {
+      opacity: 0;
+    }
+
+    /* ── Intro last frame (bridge between video and IOD image) ── */
+    #introLastFrame {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 1;
+      opacity: 0;
+      transition: opacity 600ms ease;
+    }
+
+    /* ── Intro Video ── */
+    #introVideo {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 5;
+      opacity: 1;
+      transition: opacity 800ms ease;
+      pointer-events: none;
+    }
+
+    #introVideo.fade-out {
       opacity: 0;
     }
 
@@ -139,6 +169,7 @@
       padding: 6px;
       background: rgba(255,255,255,0.04);
       border: 1px solid var(--border);
+      z-index: 10;
       border-radius: 6px;
       backdrop-filter: blur(12px);
     }
@@ -439,6 +470,99 @@
 
     .wheel-option.active .wheel-check-dot { opacity: 1; }
 
+    /* ── Reference Image Upload ── */
+    .upload-zone {
+      border: 1px dashed rgba(255,255,255,0.15);
+      border-radius: 4px;
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: border-color 200ms, background 200ms;
+      text-align: center;
+    }
+
+    .upload-zone:hover,
+    .upload-zone.drag-over {
+      border-color: rgba(255,255,255,0.4);
+      background: rgba(255,255,255,0.04);
+    }
+
+    .upload-zone-icon {
+      font-size: 20px;
+      opacity: 0.4;
+      line-height: 1;
+    }
+
+    .upload-zone-text {
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .upload-zone-text strong {
+      color: var(--text);
+      font-weight: 400;
+    }
+
+    .upload-error {
+      font-size: 10px;
+      color: var(--red);
+      letter-spacing: 0.05em;
+      margin-top: 4px;
+      display: none;
+    }
+
+    .upload-error.visible { display: block; }
+
+    .upload-success {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 4px;
+      background: rgba(255,255,255,0.03);
+    }
+
+    .upload-success.visible { display: flex; }
+
+    .upload-success-icon {
+      color: var(--red);
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+
+    .upload-success-name {
+      flex: 1;
+      font-size: 12px;
+      color: var(--text);
+      letter-spacing: 0.02em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .upload-change-btn {
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 2px 0;
+      transition: color 150ms;
+      flex-shrink: 0;
+      font-family: 'DM Sans', sans-serif;
+    }
+
+    .upload-change-btn:hover { color: var(--text); }
+
     /* Summary */
     .config-summary {
       padding: 20px 28px;
@@ -647,7 +771,6 @@
       pointer-events: none;
       opacity: 0;
       z-index: 5;
-      /* mask to circle so the rectangular JPEG looks round */
       box-shadow: 0 0 0 3px rgba(0,0,0,0.35);
     }
 
@@ -673,9 +796,15 @@
     <div class="stage-floor"></div>
 
     <div class="stage-label">
-      <div class="stage-label-model">911 Carrera S</div>
+      <div class="stage-label-model">911 McLaren S</div>
       <div class="stage-label-sub">2026 · Coupé</div>
     </div>
+
+    <img id="introLastFrame" src="public/last-frame.jpg" alt="">
+
+    <video id="introVideo" autoplay muted playsinline>
+      <source src="video.mp4" type="video/mp4">
+    </video>
 
     <div class="car-img-wrapper" id="carStage">
       <!-- Images injected by JS -->
@@ -699,7 +828,7 @@
 
     <div class="panel-header">
       <div class="panel-header-eyebrow">Configure Yours</div>
-      <div class="panel-header-title">911 Carrera S</div>
+      <div class="panel-header-title">911 McLaren S</div>
       <div class="panel-header-price">Starting at <span>$133,000</span></div>
     </div>
 
@@ -721,6 +850,29 @@
         </label>
       </div>
       <div class="wheel-grid" id="wheelGrid"></div>
+    </div>
+
+    <!-- Reference Image -->
+    <div class="config-section">
+      <div class="section-label">Reference Image</div>
+
+      <div class="upload-zone" id="uploadZone">
+        <div class="upload-zone-icon">↑</div>
+        <div class="upload-zone-text">
+          <strong>Drop an image here</strong><br>
+          or click to browse
+        </div>
+      </div>
+
+      <div class="upload-error" id="uploadError"></div>
+
+      <div class="upload-success" id="uploadSuccess">
+        <span class="upload-success-icon">✓</span>
+        <span class="upload-success-name" id="uploadFileName"></span>
+        <button class="upload-change-btn" id="uploadChangeBtn">Change</button>
+      </div>
+
+      <input type="file" id="uploadInput" accept="image/*" style="display:none">
     </div>
 
     <!-- Summary -->
@@ -806,17 +958,17 @@ const COLORS = [
 const WHEELS = [
   {
     id: "58X",
-    name: "Carrera S Wheels",
+    name: "McLaren S Wheels",
     size: '20" / 21"',
     price: 0,
-    thumb: "wheel-1.jpg"
+    thumb: "public/wheel-1.jpg"
   },
   {
     id: "58Y",
     name: "RS Spyder Design",
     size: '20" / 21"',
     price: 2840,
-    thumb: "wheel-2.jpg"
+    thumb: "public/wheel-2.jpg"
   }
 ];
 
@@ -855,12 +1007,11 @@ PERSPECTIVES.forEach((p, i) => {
   btn.className = "persp-btn" + (i === 0 ? " active" : "");
   btn.dataset.id = p.id;
 
-  // thumbnail image
   const img = document.createElement("img");
   img.className = "persp-thumb";
   img.alt = p.label;
-  // use chalk + default wheels for perspective thumbnails
   img.src = thumbUrl("0Q", "58X", p.id);
+  img.referrerPolicy = "no-referrer";
   img.onerror = () => { img.style.display = "none"; };
 
   const lbl = document.createElement("span");
@@ -911,11 +1062,9 @@ WHEELS.forEach(w => {
   opt.className = "wheel-option" + (w.id === state.wheel ? " active" : "");
   opt.dataset.id = w.id;
 
-  const thumbSrc = w.thumb;
-
   opt.innerHTML = `
     <div class="wheel-thumb-wrap">
-      <img class="wheel-thumb" src="${thumbSrc}" alt="${w.name}"
+      <img class="wheel-thumb" src="${w.thumb}" alt="${w.name}"
            onerror="this.style.opacity='0'">
     </div>
     <div class="wheel-info">
@@ -948,12 +1097,11 @@ function getOrCreateImg(color, wheel, persp) {
 
   const img = document.createElement("img");
   img.className = "car-img";
-  img.referrerPolicy = "no-referrer";
   img.alt = `Porsche 911 - ${color} - ${wheel}`;
+  img.referrerPolicy = "no-referrer";
   img.src = iodUrl(color, wheel, persp);
 
   img.onload = () => {
-    // if this is the current config, show it
     if (key === cacheKey(state.color, state.wheel, state.persp)) {
       revealCurrent(key);
     }
@@ -971,12 +1119,25 @@ function getOrCreateImg(color, wheel, persp) {
   return img;
 }
 
+let introActive = true;
+let lastFrameActive = true;
+const lastFrameEl = document.getElementById("introLastFrame");
+
+function dismissLastFrame() {
+  if (!lastFrameActive) return;
+  lastFrameActive = false;
+  lastFrameEl.style.opacity = "0";
+  lastFrameEl.addEventListener("transitionend", () => {
+    lastFrameEl.style.display = "none";
+  }, { once: true });
+}
+
 function revealCurrent(key) {
-  // Hide all
+  if (introActive) return;
+  dismissLastFrame();
   Object.entries(imgCache).forEach(([k, img]) => {
     img.classList.remove("active");
   });
-  // Show current
   if (imgCache[key]) {
     imgCache[key].classList.add("active");
   }
@@ -992,22 +1153,18 @@ function showCar() {
   if (img.complete && !img.dataset.failed) {
     revealCurrent(key);
   } else {
-    // show loader, wait for onload
     stageLoading.classList.add("visible");
-    // hide others immediately
     Object.entries(imgCache).forEach(([k, i]) => {
       if (k !== key) i.classList.remove("active");
     });
   }
 
-  // Preload adjacent combos
   preloadNeighbors(color, wheel, persp);
 }
 
 function preloadNeighbors(color, wheel, persp) {
   COLORS.forEach(c => {
     WHEELS.forEach(w => {
-      // preload all on current perspective
       getOrCreateImg(c.id, w.id, persp);
     });
   });
@@ -1026,7 +1183,7 @@ function renderSummary() {
 
   configSummary.innerHTML = `
     <div class="summary-row">
-      <span class="summary-label">911 Carrera S Coupé</span>
+      <span class="summary-label">911 McLaren S Coupé</span>
       <span class="summary-value">$${basePrice.toLocaleString()}</span>
     </div>
     <div class="summary-row">
@@ -1050,6 +1207,29 @@ function renderSummary() {
 renderSummary();
 showCar();
 
+// ── Intro video → fade out → show car ────────────────────────────────────────
+
+(function () {
+  const video = document.getElementById("introVideo");
+  if (!video) return;
+
+  function endIntro() {
+    introActive = false;
+    lastFrameEl.style.opacity = "1";
+    video.classList.add("fade-out");
+    video.addEventListener("transitionend", () => {
+      video.style.display = "none";
+    }, { once: true });
+  }
+
+  video.addEventListener("ended", endIntro);
+
+  video.addEventListener("error", () => {
+    introActive = false;
+    video.style.display = "none";
+  });
+})();
+
 // preload all perspective×color×wheel combos in background after a short delay
 setTimeout(() => {
   PERSPECTIVES.forEach(p => {
@@ -1070,8 +1250,6 @@ const stageEl        = document.querySelector(".stage");
 
 let spinActive = false;
 
-// Wheel centers and radius in the ext-low-side-left IOD image
-// expressed as fractions of the image's natural dimensions (1920×1080)
 const SIDE_RATIO = 1920 / 1080;
 const WHEEL_POS = {
   front: { cx: 0.259, cy: 0.605, r: 0.080 },
@@ -1082,7 +1260,6 @@ function positionWheelOverlays() {
   const cw = stageEl.offsetWidth;
   const ch = stageEl.offsetHeight;
 
-  // Compute rendered image bounds under object-fit:cover
   let rW, rH, ox, oy;
   if (cw / ch > SIDE_RATIO) {
     rW = cw; rH = cw / SIDE_RATIO;
@@ -1107,7 +1284,6 @@ function positionWheelOverlays() {
 }
 
 function activateSpin() {
-  // Switch to side view
   const sideId = "ext-low-side-left";
   state.persp = sideId;
   document.querySelectorAll(".persp-btn").forEach(b =>
@@ -1115,7 +1291,6 @@ function activateSpin() {
   );
   showCar();
 
-  // Set wheel image source to the currently selected wheel
   const activeWheel = WHEELS.find(w => w.id === state.wheel);
   const src = activeWheel ? activeWheel.thumb : "";
   wheelOverlayF.src = src;
@@ -1131,7 +1306,6 @@ function deactivateSpin() {
   wheelOverlayR.classList.remove("spinning");
 }
 
-// Toggle click
 spinToggleEl.addEventListener("click", () => {
   spinActive = !spinActive;
   spinToggleEl.classList.toggle("on", spinActive);
@@ -1139,7 +1313,6 @@ spinToggleEl.addEventListener("click", () => {
   else deactivateSpin();
 });
 
-// When wheel selection changes while spin is active, update the overlay images
 const origWheelClickHandler = () => {
   if (spinActive) {
     const activeWheel = WHEELS.find(w => w.id === state.wheel);
@@ -1150,18 +1323,81 @@ const origWheelClickHandler = () => {
 };
 document.getElementById("wheelGrid").addEventListener("click", origWheelClickHandler);
 
-// Reposition on resize
 window.addEventListener("resize", () => {
   if (spinActive) positionWheelOverlays();
 });
 
-// Turn off spin when user manually switches perspective
 document.getElementById("perspBar").addEventListener("click", () => {
   if (spinActive) {
     spinActive = false;
     spinToggleEl.classList.remove("on");
     deactivateSpin();
   }
+});
+
+// ── Reference Image Upload ────────────────────────────────────────────────────
+
+let uploadedFile = null;
+
+const uploadZone      = document.getElementById("uploadZone");
+const uploadInput     = document.getElementById("uploadInput");
+const uploadError     = document.getElementById("uploadError");
+const uploadSuccess   = document.getElementById("uploadSuccess");
+const uploadFileName  = document.getElementById("uploadFileName");
+const uploadChangeBtn = document.getElementById("uploadChangeBtn");
+
+const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+
+function handleFile(file) {
+  uploadError.classList.remove("visible");
+
+  if (!file.type.startsWith("image/")) {
+    uploadError.textContent = "Please upload an image file (JPG, PNG, WEBP, GIF).";
+    uploadError.classList.add("visible");
+    return;
+  }
+
+  if (file.size > MAX_SIZE) {
+    uploadError.textContent = "File exceeds 10 MB limit. Please choose a smaller image.";
+    uploadError.classList.add("visible");
+    return;
+  }
+
+  uploadedFile = file;
+  uploadFileName.textContent = file.name;
+  uploadZone.style.display = "none";
+  uploadSuccess.classList.add("visible");
+}
+
+function resetUpload() {
+  uploadedFile = null;
+  uploadInput.value = "";
+  uploadZone.style.display = "";
+  uploadSuccess.classList.remove("visible");
+  uploadError.classList.remove("visible");
+}
+
+uploadZone.addEventListener("click", () => uploadInput.click());
+uploadInput.addEventListener("change", () => {
+  if (uploadInput.files[0]) handleFile(uploadInput.files[0]);
+});
+
+uploadChangeBtn.addEventListener("click", resetUpload);
+
+uploadZone.addEventListener("dragover", (e) => {
+  e.preventDefault();
+  uploadZone.classList.add("drag-over");
+});
+
+uploadZone.addEventListener("dragleave", () => {
+  uploadZone.classList.remove("drag-over");
+});
+
+uploadZone.addEventListener("drop", (e) => {
+  e.preventDefault();
+  uploadZone.classList.remove("drag-over");
+  const file = e.dataTransfer.files[0];
+  if (file) handleFile(file);
 });
 </script>
 
