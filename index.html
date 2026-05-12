@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Aerodisc Wheel Configurator</title>
-  <link rel="icon" type="image/jpeg" href="/public/wheel-1.png">
+  <link rel="icon" type="image/jpeg" href="public/wheel-1.png">
   <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;1,9..40,300&display=swap" rel="stylesheet">
@@ -657,10 +657,10 @@
       <div class="stage-label-sub">2026 · Coupé</div>
     </div>
 
-    <img id="introLastFrame" src="/public/last-frame.jpg" alt="">
+    <img id="introLastFrame" src="public/last-frame.jpg" alt="">
 
     <video id="introVideo" autoplay muted playsinline>
-      <source src="/video.mp4" type="video/mp4">
+      <source src="video.mp4" type="video/mp4">
     </video>
 
     <div class="car-img-wrapper" id="carStage">
@@ -764,12 +764,12 @@ function buildIodHash(colorCode, wheelCode, cameraId) {
 
 function iodUrl(colorCode, wheelCode, cameraId) {
   const hash = buildIodHash(colorCode, wheelCode, cameraId);
-  return `/iod/image/US/9921B2/1/${hash}?clientId=icc`;
+  return `https://prs.porsche.com/iod/image/US/9921B2/1/${hash}?clientId=icc`;
 }
 
 function thumbUrl(colorCode, wheelCode, cameraId) {
   const hash = buildIodHash(colorCode, wheelCode, cameraId);
-  return `/iod/thumbnail/US/9921B2/1/${hash}?clientId=icc`;
+  return `https://prs.porsche.com/iod/thumbnail/US/9921B2/1/${hash}?clientId=icc`;
 }
 
 // ── Config Data ──────────────────────────────────────────────────────────────
@@ -782,7 +782,7 @@ const COLORS = [
     hex: "#E4E0D5",
     metallic: false,
     price: 0,
-    img: "/public/t-white.jpeg"
+    img: "public/t-white.jpeg"
   },
   {
     id: "G1",
@@ -791,7 +791,7 @@ const COLORS = [
     hex: "#B8001F",
     metallic: false,
     price: 0,
-    img: "/public/t-red.jpeg"
+    img: "public/t-red.jpeg"
   },
   {
     id: "45",
@@ -800,20 +800,20 @@ const COLORS = [
     hex: "#1C3D6E",
     metallic: true,
     price: 820,
-    img: "/public/t-blue.jpeg"
+    img: "public/t-blue.jpeg"
   }
 ];
 
 const WHEELS = [
-  { id: "w1", sku: "HCN-1001", name: "Crimson Vortex", size: '20" / 21"', price:    0, thumb: "/public/wheel-1.png" },
-  { id: "w2", sku: "HCN-1002", name: "Stealth Rotor",  size: '20" / 21"', price:  820, thumb: "/public/wheel-2.png" },
-  { id: "w3", sku: "HCN-1003", name: "Arctic Camo",    size: '20" / 21"', price:  820, thumb: "/public/wheel-3.png" },
-  { id: "w4", sku: "HCN-1004", name: "Hex Carbon",     size: '20" / 21"', price: 1640, thumb: "/public/wheel-4.png" },
-  { id: "w5", sku: "HCN-1005", name: "Solar Flare",    size: '20" / 21"', price: 1640, thumb: "/public/wheel-5.png" },
-  { id: "w6", sku: "HCN-1006", name: "Crimson Web",    size: '20" / 21"', price: 2200, thumb: "/public/wheel-6.png" },
-  { id: "w7", sku: "HCN-1007", name: "Onyx Stealth",   size: '20" / 21"', price: 2840, thumb: "/public/wheel-7.png" },
-  { id: "w8", sku: "HCN-1008", name: "Apex Striker",   size: '20" / 21"', price: 2840, thumb: "/public/wheel-8.png" },
-  { id: "w9", sku: "HCN-1009", name: "Inferno Halo",   size: '20" / 21"', price: 3500, thumb: "/public/wheel-9.png" }
+  { id: "w1", sku: "HCN-1001", name: "Crimson Vortex", size: '20" / 21"', price:    0, thumb: "public/wheel-1.png" },
+  { id: "w2", sku: "HCN-1002", name: "Stealth Rotor",  size: '20" / 21"', price:  820, thumb: "public/wheel-2.png" },
+  { id: "w3", sku: "HCN-1003", name: "Arctic Camo",    size: '20" / 21"', price:  820, thumb: "public/wheel-3.png" },
+  { id: "w4", sku: "HCN-1004", name: "Hex Carbon",     size: '20" / 21"', price: 1640, thumb: "public/wheel-4.png" },
+  { id: "w5", sku: "HCN-1005", name: "Solar Flare",    size: '20" / 21"', price: 1640, thumb: "public/wheel-5.png" },
+  { id: "w6", sku: "HCN-1006", name: "Crimson Web",    size: '20" / 21"', price: 2200, thumb: "public/wheel-6.png" },
+  { id: "w7", sku: "HCN-1007", name: "Onyx Stealth",   size: '20" / 21"', price: 2840, thumb: "public/wheel-7.png" },
+  { id: "w8", sku: "HCN-1008", name: "Apex Striker",   size: '20" / 21"', price: 2840, thumb: "public/wheel-8.png" },
+  { id: "w9", sku: "HCN-1009", name: "Inferno Halo",   size: '20" / 21"', price: 3500, thumb: "public/wheel-9.png" }
 ];
 
 // ── State ────────────────────────────────────────────────────────────────────
