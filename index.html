@@ -3,9 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="referrer" content="no-referrer">
   <title>Aerodisc Wheel Configurator</title>
-  <link rel="icon" type="image/jpeg" href="public/wheel-1.jpg">
+  <link rel="icon" type="image/jpeg" href="/public/wheel-1.png">
   <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;1,9..40,300&display=swap" rel="stylesheet">
@@ -572,7 +571,7 @@
 
       .app {
         grid-template-columns: 1fr;
-        grid-template-rows: 62vw 1fr;
+        grid-template-rows: 74vw 1fr;
         height: auto;
         min-height: 100vh;
       }
@@ -633,6 +632,10 @@
       animation: wheelSpin 0.45s linear infinite;
     }
 
+    .wheel-spin-overlay.visible {
+      opacity: 1;
+    }
+
     @keyframes wheelSpin {
       from { transform: rotate(0deg); }
       to   { transform: rotate(-360deg); }
@@ -654,10 +657,10 @@
       <div class="stage-label-sub">2026 · Coupé</div>
     </div>
 
-    <img id="introLastFrame" src="public/last-frame.jpg" alt="">
+    <img id="introLastFrame" src="/public/last-frame.jpg" alt="">
 
     <video id="introVideo" autoplay muted playsinline>
-      <source src="video.mp4" type="video/mp4">
+      <source src="/video.mp4" type="video/mp4">
     </video>
 
     <div class="car-img-wrapper" id="carStage">
@@ -666,6 +669,8 @@
 
     <!-- Wheel spin overlay (rear wheel only) -->
     <img class="wheel-spin-overlay" id="wheelOverlayRear"  alt="" src="">
+    <!-- Front wheel overlay (static, no spin) -->
+    <img class="wheel-spin-overlay" id="wheelOverlayFront" alt="" src="">
 
     <div class="stage-loading" id="stageLoading">
       <div class="loader-ring"></div>
@@ -759,12 +764,12 @@ function buildIodHash(colorCode, wheelCode, cameraId) {
 
 function iodUrl(colorCode, wheelCode, cameraId) {
   const hash = buildIodHash(colorCode, wheelCode, cameraId);
-  return `https://prs.porsche.com/iod/image/US/9921B2/1/${hash}?clientId=icc`;
+  return `/iod/image/US/9921B2/1/${hash}?clientId=icc`;
 }
 
 function thumbUrl(colorCode, wheelCode, cameraId) {
   const hash = buildIodHash(colorCode, wheelCode, cameraId);
-  return `https://prs.porsche.com/iod/thumbnail/US/9921B2/1/${hash}?clientId=icc`;
+  return `/iod/thumbnail/US/9921B2/1/${hash}?clientId=icc`;
 }
 
 // ── Config Data ──────────────────────────────────────────────────────────────
@@ -777,7 +782,7 @@ const COLORS = [
     hex: "#E4E0D5",
     metallic: false,
     price: 0,
-    img: "public/t-white.jpeg"
+    img: "/public/t-white.jpeg"
   },
   {
     id: "G1",
@@ -786,7 +791,7 @@ const COLORS = [
     hex: "#B8001F",
     metallic: false,
     price: 0,
-    img: "public/t-red.jpeg"
+    img: "/public/t-red.jpeg"
   },
   {
     id: "45",
@@ -795,20 +800,20 @@ const COLORS = [
     hex: "#1C3D6E",
     metallic: true,
     price: 820,
-    img: "public/t-blue.jpeg"
+    img: "/public/t-blue.jpeg"
   }
 ];
 
 const WHEELS = [
-  { id: "w1", sku: "HCN-1001", name: "Crimson Vortex", size: '20" / 21"', price:    0, thumb: "public/wheel-1.jpg" },
-  { id: "w2", sku: "HCN-1002", name: "Stealth Rotor",  size: '20" / 21"', price:  820, thumb: "public/wheel-2.jpg" },
-  { id: "w3", sku: "HCN-1003", name: "Arctic Camo",    size: '20" / 21"', price:  820, thumb: "public/wheel-3.jpg" },
-  { id: "w4", sku: "HCN-1004", name: "Hex Carbon",     size: '20" / 21"', price: 1640, thumb: "public/wheel-4.jpg" },
-  { id: "w5", sku: "HCN-1005", name: "Solar Flare",    size: '20" / 21"', price: 1640, thumb: "public/wheel-5.jpg" },
-  { id: "w6", sku: "HCN-1006", name: "Crimson Web",    size: '20" / 21"', price: 2200, thumb: "public/wheel-6.jpg" },
-  { id: "w7", sku: "HCN-1007", name: "Onyx Stealth",   size: '20" / 21"', price: 2840, thumb: "public/wheel-7.jpg" },
-  { id: "w8", sku: "HCN-1008", name: "Apex Striker",   size: '20" / 21"', price: 2840, thumb: "public/wheel-8.jpg" },
-  { id: "w9", sku: "HCN-1009", name: "Inferno Halo",   size: '20" / 21"', price: 3500, thumb: "public/wheel-9.jpg" }
+  { id: "w1", sku: "HCN-1001", name: "Crimson Vortex", size: '20" / 21"', price:    0, thumb: "/public/wheel-1.png" },
+  { id: "w2", sku: "HCN-1002", name: "Stealth Rotor",  size: '20" / 21"', price:  820, thumb: "/public/wheel-2.png" },
+  { id: "w3", sku: "HCN-1003", name: "Arctic Camo",    size: '20" / 21"', price:  820, thumb: "/public/wheel-3.png" },
+  { id: "w4", sku: "HCN-1004", name: "Hex Carbon",     size: '20" / 21"', price: 1640, thumb: "/public/wheel-4.png" },
+  { id: "w5", sku: "HCN-1005", name: "Solar Flare",    size: '20" / 21"', price: 1640, thumb: "/public/wheel-5.png" },
+  { id: "w6", sku: "HCN-1006", name: "Crimson Web",    size: '20" / 21"', price: 2200, thumb: "/public/wheel-6.png" },
+  { id: "w7", sku: "HCN-1007", name: "Onyx Stealth",   size: '20" / 21"', price: 2840, thumb: "/public/wheel-7.png" },
+  { id: "w8", sku: "HCN-1008", name: "Apex Striker",   size: '20" / 21"', price: 2840, thumb: "/public/wheel-8.png" },
+  { id: "w9", sku: "HCN-1009", name: "Inferno Halo",   size: '20" / 21"', price: 3500, thumb: "/public/wheel-9.png" }
 ];
 
 // ── State ────────────────────────────────────────────────────────────────────
@@ -1059,6 +1064,7 @@ setTimeout(() => {
 // ── Wheel Spin Mode ───────────────────────────────────────────────────────────
 
 const wheelOverlayR  = document.getElementById("wheelOverlayRear");
+const wheelOverlayF  = document.getElementById("wheelOverlayFront");
 const stageEl        = document.querySelector(".stage");
 
 // ── Rear-wheel overlay placement ────────────────────────────────────────────
@@ -1070,7 +1076,10 @@ const stageEl        = document.querySelector(".stage");
 const SIDE_RATIO = 1920 / 1080;
 let REAR_CX = 0.68;
 let REAR_CY = 0.57;
-let REAR_R  = 0.06;
+let REAR_R  = 0.068;
+let FRONT_CX = 0.308;
+let FRONT_CY = 0.57;
+let FRONT_R  = 0.068;
 
 // Console tuning helper: tuneWheel(cx, cy, r) — pass any/all, undefined keeps current
 window.tuneWheel = (cx, cy, r) => {
@@ -1079,6 +1088,13 @@ window.tuneWheel = (cx, cy, r) => {
   if (r  !== undefined) REAR_R  = r;
   positionWheelOverlays();
   console.log(`REAR_CX=${REAR_CX}  REAR_CY=${REAR_CY}  REAR_R=${REAR_R}`);
+};
+window.tuneFrontWheel = (cx, cy, r) => {
+  if (cx !== undefined) FRONT_CX = cx;
+  if (cy !== undefined) FRONT_CY = cy;
+  if (r  !== undefined) FRONT_R  = r;
+  positionWheelOverlays();
+  console.log(`FRONT_CX=${FRONT_CX}  FRONT_CY=${FRONT_CY}  FRONT_R=${FRONT_R}`);
 };
 
 function positionWheelOverlays() {
@@ -1102,18 +1118,30 @@ function positionWheelOverlays() {
   wheelOverlayR.style.top    = (cy - r) + "px";
   wheelOverlayR.style.width  = (r * 2)  + "px";
   wheelOverlayR.style.height = (r * 2)  + "px";
+
+  const fcx = ox + FRONT_CX * rW;
+  const fcy = oy + FRONT_CY * rH;
+  const fr  = FRONT_R  * rH;
+  wheelOverlayF.style.left   = (fcx - fr) + "px";
+  wheelOverlayF.style.top    = (fcy - fr) + "px";
+  wheelOverlayF.style.width  = (fr * 2)   + "px";
+  wheelOverlayF.style.height = (fr * 2)   + "px";
 }
 
 function updateSpinWheel() {
   const activeWheel = WHEELS.find(w => w.id === state.wheel);
   if (!activeWheel) {
     wheelOverlayR.classList.remove("spinning");
+    wheelOverlayF.classList.remove("visible");
     wheelOverlayR.src = "";
+    wheelOverlayF.src = "";
     return;
   }
   wheelOverlayR.src = activeWheel.thumb;
+  wheelOverlayF.src = activeWheel.thumb;
   positionWheelOverlays();
   wheelOverlayR.classList.add("spinning");
+  wheelOverlayF.classList.add("visible");
 }
 
 // Spin activates when a wheel is selected; switching updates the overlay source
