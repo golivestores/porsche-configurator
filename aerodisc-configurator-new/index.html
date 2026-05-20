@@ -1,0 +1,2188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aerodisc Wheel Configurator</title>
+  <link rel="icon" type="image/jpeg" href="public/wheel-1.png">
+  <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;1,9..40,300&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --black: #0a0a0a;
+      --surface: #111111;
+      --surface-2: #1a1a1a;
+      --border: rgba(255,255,255,0.08);
+      --text: #f0ede8;
+      --text-muted: rgba(240,237,232,0.45);
+      --red: #D5001C;
+      --chalk: #E8E4D9;
+      --guards-red: #B8001F;
+      --gentian-blue: #1C3D6E;
+      --transition: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    html, body {
+      min-height: 100%;
+      background: var(--black);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 300;
+    }
+    html { scroll-padding-top: 64px; }
+    @media (max-width: 480px) { html { scroll-padding-top: 44px; } }
+    /* `clip` prevents the scroll-container creation that `hidden` would
+       trigger and would break the section-nav's position: sticky. */
+    body { overflow-x: clip; }
+
+    /* ── Layout ── */
+    .app {
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      grid-template-rows: 1fr auto;
+      height: 100dvh;
+      width: 100vw;
+    }
+
+    /* ── Car Stage ── */
+    .stage {
+      grid-column: 1;
+      grid-row: 1 / 3;
+      position: relative;
+      overflow: hidden;
+      background: var(--black);
+    }
+
+    .stage-bg { display: none; }
+    .stage-floor { display: none; }
+
+    .car-img-wrapper {
+      position: absolute;
+      inset: 0;
+    }
+
+    .car-img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center center;
+      opacity: 0;
+      transition: opacity var(--transition);
+      z-index: 2;
+    }
+
+    .car-img.active {
+      opacity: 1;
+    }
+
+    .car-img.fade-out {
+      opacity: 0;
+    }
+
+    /* ── Intro last frame (bridge between video and IOD image) ── */
+    #introLastFrame {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 1;
+      opacity: 0;
+      transition: opacity 600ms ease;
+    }
+
+    /* ── Intro Video ── */
+    #introVideo {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 5;
+      opacity: 1;
+      transition: opacity 800ms ease;
+      pointer-events: none;
+    }
+
+    #introVideo.fade-out {
+      opacity: 0;
+    }
+
+    /* loading shimmer */
+    .stage-loading {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 200ms;
+      pointer-events: none;
+    }
+
+    .stage-loading.visible { opacity: 1; }
+
+    .loader-ring {
+      width: 32px;
+      height: 32px;
+      border: 1.5px solid rgba(255,255,255,0.1);
+      border-top-color: rgba(255,255,255,0.5);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* corner label */
+    .stage-label {
+      position: absolute;
+      top: 32px;
+      left: 36px;
+      pointer-events: none;
+    }
+
+    .stage-label-model {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(28px, 3vw, 42px);
+      letter-spacing: 0.04em;
+      line-height: 1;
+      color: var(--text);
+    }
+
+    .stage-label-sub {
+      font-size: 11px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* ── Config Panel ── */
+    .panel {
+      grid-column: 2;
+      grid-row: 1 / 3;
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255,255,255,0.1) transparent;
+    }
+
+    .panel-header {
+      padding: 32px 28px 24px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .panel-header-eyebrow {
+      font-size: 10px;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--red);
+      margin-bottom: 8px;
+    }
+
+    .panel-header-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 30px;
+      letter-spacing: 0.03em;
+      line-height: 1;
+    }
+
+    .panel-header-price {
+      margin-top: 10px;
+      font-size: 13px;
+      color: var(--text-muted);
+      letter-spacing: 0.05em;
+    }
+
+    .panel-header-price span {
+      color: var(--text);
+      font-weight: 400;
+    }
+
+    /* Sections */
+    .config-section {
+      padding: 24px 28px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .section-label {
+      font-size: 9px;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+
+    /* Color swatches */
+    .color-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .color-option {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 10px 12px;
+      border: 1px solid transparent;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: border-color 180ms, background 180ms;
+      position: relative;
+    }
+
+    .color-option:hover {
+      border-color: rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.03);
+    }
+
+    .color-option.active {
+      border-color: rgba(255,255,255,0.3);
+      background: rgba(255,255,255,0.05);
+    }
+
+    .color-swatch {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      position: relative;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.15), 0 2px 8px rgba(0,0,0,0.4);
+    }
+
+    .color-swatch.metallic::after {
+      content: '';
+      position: absolute;
+      inset: 3px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, rgba(255,255,255,0.3) 0%, transparent 60%);
+    }
+
+    .color-info { flex: 1; }
+
+    .color-name {
+      font-size: 13px;
+      font-weight: 400;
+      letter-spacing: 0.02em;
+    }
+
+    .color-type {
+      font-size: 10px;
+      color: var(--text-muted);
+      letter-spacing: 0.05em;
+      margin-top: 2px;
+    }
+
+    .color-check {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 1.5px solid rgba(255,255,255,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: border-color 180ms, background 180ms;
+    }
+
+    .color-option.active .color-check {
+      border-color: var(--text);
+      background: var(--text);
+    }
+
+    .color-check-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--black);
+      opacity: 0;
+      transition: opacity 180ms;
+    }
+
+    .color-option.active .color-check-dot { opacity: 1; }
+
+    /* Wheel options — 3x3 grid of pattern thumbnails */
+    .wheel-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .wheel-option {
+      position: relative;
+      aspect-ratio: 1 / 1;
+      border-radius: 50%;
+      overflow: hidden;
+      cursor: pointer;
+      background: var(--surface-2);
+      border: 2px solid transparent;
+      transition: border-color 180ms, transform 180ms;
+    }
+
+    .wheel-option:hover {
+      border-color: rgba(255,255,255,0.25);
+    }
+
+    .wheel-option.active {
+      border-color: var(--text);
+    }
+
+    .wheel-thumb {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: opacity 200ms;
+    }
+
+    .wheel-selected-label {
+      margin-top: 16px;
+      text-align: center;
+      font-size: 13px;
+      letter-spacing: 0.04em;
+      color: var(--text);
+    }
+    .wheel-selected-label .price {
+      color: var(--text-muted);
+      margin-left: 6px;
+      font-size: 12px;
+    }
+    .wheel-selected-label .sku {
+      margin-top: 4px;
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      color: var(--text-muted);
+      font-family: 'Bebas Neue', sans-serif;
+    }
+
+    /* ── Reference Image Upload ── */
+    .upload-zone {
+      border: 1px dashed rgba(255,255,255,0.15);
+      border-radius: 4px;
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: border-color 200ms, background 200ms;
+      text-align: center;
+    }
+
+    .upload-zone:hover,
+    .upload-zone.drag-over {
+      border-color: rgba(255,255,255,0.4);
+      background: rgba(255,255,255,0.04);
+    }
+
+    .upload-zone-icon {
+      font-size: 20px;
+      opacity: 0.4;
+      line-height: 1;
+    }
+
+    .upload-zone-text {
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .upload-zone-text strong {
+      color: var(--text);
+      font-weight: 400;
+    }
+
+    .upload-error {
+      font-size: 10px;
+      color: var(--red);
+      letter-spacing: 0.05em;
+      margin-top: 4px;
+      display: none;
+    }
+
+    .upload-error.visible { display: block; }
+
+    .upload-success {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 4px;
+      background: rgba(255,255,255,0.03);
+    }
+
+    .upload-success.visible { display: flex; }
+
+    .upload-success-icon {
+      color: var(--red);
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+
+    .upload-success-name {
+      flex: 1;
+      font-size: 12px;
+      color: var(--text);
+      letter-spacing: 0.02em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .upload-change-btn {
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 2px 0;
+      transition: color 150ms;
+      flex-shrink: 0;
+      font-family: 'DM Sans', sans-serif;
+    }
+
+    .upload-change-btn:hover { color: var(--text); }
+
+    /* Summary */
+    .config-summary {
+      padding: 20px 28px;
+      flex-shrink: 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 5px 0;
+      font-size: 12px;
+    }
+
+    .summary-label { color: var(--text-muted); }
+    .summary-value { color: var(--text); letter-spacing: 0.03em; }
+
+    .summary-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 10px 0;
+    }
+
+    .summary-total {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 4px 0;
+    }
+
+    .summary-total-label {
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .summary-total-price {
+      font-size: 18px;
+      font-weight: 400;
+      letter-spacing: 0.02em;
+    }
+
+    /* CTA */
+    .panel-cta {
+      padding: 20px 28px 28px;
+      flex-shrink: 0;
+      margin-top: auto;
+    }
+
+    .btn-primary {
+      display: block;
+      width: 100%;
+      padding: 14px;
+      background: var(--text);
+      color: var(--black);
+      border: none;
+      border-radius: 3px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12px;
+      font-weight: 400;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background 200ms, transform 100ms;
+    }
+
+    .btn-primary:hover { background: #e0dcd6; }
+    .btn-primary:active { transform: scale(0.99); }
+
+    .btn-secondary {
+      display: block;
+      width: 100%;
+      margin-top: 10px;
+      padding: 13px;
+      background: transparent;
+      color: var(--text);
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 3px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12px;
+      font-weight: 300;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: border-color 200ms, background 200ms;
+    }
+
+    .btn-secondary:hover {
+      border-color: rgba(255,255,255,0.4);
+      background: rgba(255,255,255,0.04);
+    }
+
+    /* Size selector (compact dropdown) */
+    .size-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .size-row .size-row-label {
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      flex: 1;
+    }
+    .size-select {
+      appearance: none;
+      -webkit-appearance: none;
+      background: var(--surface-2);
+      color: var(--text);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 3px;
+      padding: 7px 28px 7px 12px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12px;
+      letter-spacing: 0.06em;
+      cursor: pointer;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='none' stroke='%23f0ede8' stroke-width='1.4' d='M1 1l4 4 4-4'/></svg>");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      transition: border-color 180ms;
+    }
+    .size-select:hover { border-color: rgba(255,255,255,0.32); }
+    .size-select:focus { outline: none; border-color: var(--text); }
+    /* Tighter padding for the size config-section */
+    .config-section.size-section { padding: 14px 28px; }
+
+    /* Payments row */
+    .payments {
+      padding: 16px 28px 8px;
+      flex-shrink: 0;
+    }
+    .payments-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+    .payments-grid img {
+      height: 22px;
+      width: auto;
+      background: #fff;
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 3px;
+      padding: 2px 4px;
+      display: block;
+    }
+
+    /* Accordion */
+    .accordions {
+      padding: 4px 28px 24px;
+      flex-shrink: 0;
+    }
+    .accordion-item {
+      border-top: 1px solid var(--border);
+    }
+    .accordion-item:last-child { border-bottom: 1px solid var(--border); }
+    .accordion-header {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 0;
+      background: none;
+      border: none;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      cursor: pointer;
+      text-align: left;
+    }
+    .accordion-header .chev {
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.2);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 220ms ease;
+      font-size: 10px;
+      color: var(--text);
+      flex-shrink: 0;
+      margin-left: 12px;
+    }
+    .accordion-item.open .accordion-header .chev { transform: rotate(180deg); }
+    .accordion-body {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 280ms ease;
+      color: var(--text-muted);
+      font-size: 12px;
+      line-height: 1.65;
+    }
+    .accordion-body-inner { padding: 0 0 16px; }
+
+    /* IOD status info */
+    .stage-info {
+      position: absolute;
+      top: 32px;
+      right: 32px;
+      background: rgba(0,0,0,0.5);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 8px 12px;
+      font-size: 10px;
+      color: var(--text-muted);
+      letter-spacing: 0.08em;
+      backdrop-filter: blur(8px);
+      display: none;
+    }
+
+    /* ── Mobile ── */
+    @media (max-width: 860px) {
+      .app {
+        grid-template-columns: 1fr;
+        grid-template-rows: 95vw 1fr;
+        height: auto;
+        min-height: 100dvh;
+      }
+
+      .stage {
+        grid-column: 1;
+        grid-row: 1;
+      }
+
+      .stage-label { top: 20px; left: 20px; }
+
+      .panel {
+        grid-column: 1;
+        grid-row: 2;
+        border-left: none;
+        border-top: 1px solid var(--border);
+        overflow: visible;
+      }
+
+      /* Colors: horizontal row on mobile */
+      .color-grid {
+        flex-direction: row;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .color-option {
+        flex: 1;
+        flex-direction: column;
+        gap: 6px;
+        padding: 10px 6px;
+        text-align: center;
+      }
+
+      .color-swatch { width: 32px; height: 32px; }
+
+      .color-info { flex: none; width: 100%; }
+      .color-name { font-size: 12px; }
+      .color-type { font-size: 10px; }
+
+      /* hide the right-side check indicator in row mode */
+      .color-option .color-check { display: none; }
+    }
+    /* ── Wheel spin overlays ── */
+    .wheel-spin-overlay {
+      position: absolute;
+      border-radius: 50%;
+      object-fit: cover;
+      pointer-events: none;
+      opacity: 0;
+      z-index: 5;
+      /* mask to circle so the rectangular JPEG looks round */
+      box-shadow: 0 0 0 3px rgba(0,0,0,0.35);
+    }
+
+    .wheel-spin-overlay.spinning {
+      opacity: 1;
+      animation: wheelSpin 0.45s linear infinite;
+    }
+
+    .wheel-spin-overlay.visible {
+      opacity: 1;
+    }
+
+    @keyframes wheelSpin {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(-360deg); }
+    }
+
+    /* ──────────────────────────────────────────────────────────────────────
+       SCROLLING STORY SECTIONS (below configurator)
+       ────────────────────────────────────────────────────────────────────── */
+
+    /* Section nav — sticky bar that anchors below the first viewport */
+    .section-nav {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(10,10,10,0.78);
+      backdrop-filter: saturate(160%) blur(14px);
+      -webkit-backdrop-filter: saturate(160%) blur(14px);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+    .section-nav-inner {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      padding: 14px 5vw;
+      max-width: 100%;
+    }
+    .nav-brand {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 140px;
+      flex-shrink: 0;
+    }
+    .nav-brand-name {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 16px;
+      letter-spacing: 0.14em;
+      line-height: 1;
+    }
+    .nav-brand-price {
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+    .nav-brand-price strong { color: var(--text); font-weight: 400; letter-spacing: 0.04em; }
+    .nav-links {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+      flex: 1;
+      overflow-x: auto;
+      scrollbar-width: none;
+      justify-content: center;
+    }
+    .nav-links::-webkit-scrollbar { display: none; }
+    .nav-link {
+      position: relative;
+      padding: 10px 16px;
+      font-size: 11px;
+      font-weight: 400;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(240,237,232,0.6);
+      text-decoration: none;
+      white-space: nowrap;
+      border-radius: 999px;
+      transition: color 200ms, background 200ms;
+    }
+    .nav-link::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      bottom: 4px;
+      width: 0;
+      height: 1px;
+      background: var(--red);
+      transition: width 220ms ease, left 220ms ease;
+    }
+    .nav-link:hover { color: var(--text); }
+    .nav-link.active {
+      color: var(--text);
+      background: rgba(255,255,255,0.05);
+    }
+    .nav-link.active::after { width: 24px; left: calc(50% - 12px); }
+
+    .nav-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 22px;
+      background: var(--text);
+      color: var(--black);
+      border: none;
+      border-radius: 999px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: background 200ms, transform 100ms, box-shadow 200ms;
+      box-shadow: 0 0 0 0 rgba(255,255,255,0);
+    }
+    .nav-cta:hover {
+      background: #fff;
+      box-shadow: 0 0 0 6px rgba(255,255,255,0.06);
+    }
+    .nav-cta:active { transform: scale(0.97); }
+    .nav-cta-arrow {
+      width: 14px;
+      height: 14px;
+      display: inline-block;
+      border-top: 1.5px solid currentColor;
+      border-right: 1.5px solid currentColor;
+      transform: rotate(-45deg);
+      margin-left: -2px;
+    }
+
+    @media (max-width: 980px) {
+      .nav-brand { display: none; }
+      .nav-links { justify-content: flex-start; }
+    }
+    @media (max-width: 600px) {
+      .section-nav-inner { padding: 10px 4vw; gap: 12px; }
+      .nav-link { padding: 8px 12px; font-size: 10px; letter-spacing: 0.14em; }
+      .nav-cta { padding: 9px 16px; font-size: 10px; letter-spacing: 0.16em; }
+    }
+
+    .story {
+      padding: 96px 8vw;
+      border-top: 1px solid var(--border);
+      background: var(--black);
+    }
+    .story-eyebrow {
+      font-size: 11px;
+      letter-spacing: 0.32em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 14px;
+    }
+    .story-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(36px, 5vw, 64px);
+      letter-spacing: 0.04em;
+      line-height: 1.05;
+      margin-bottom: 18px;
+    }
+    .story-lead {
+      max-width: 720px;
+      font-size: 15px;
+      line-height: 1.7;
+      color: rgba(240,237,232,0.78);
+      margin-bottom: 56px;
+    }
+
+    /* §1 Efficiency: 5 icon row + 4 pillar grid */
+    .eff-icons {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 24px;
+      margin-bottom: 64px;
+    }
+    .eff-icon {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 16px;
+    }
+    .eff-icon img {
+      width: 100%;
+      max-width: 180px;
+      aspect-ratio: 1 / 1;
+      object-fit: cover;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .eff-icon-label {
+      font-size: 13px;
+      letter-spacing: 0.06em;
+      color: var(--text);
+    }
+
+    .eff-hero {
+      position: relative;
+      border-radius: 6px;
+      overflow: hidden;
+      margin-bottom: 56px;
+      background: var(--surface);
+    }
+    .eff-hero img {
+      width: 100%;
+      height: clamp(280px, 50vh, 520px);
+      object-fit: cover;
+      display: block;
+    }
+
+    .eff-pillars {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 32px;
+    }
+    .eff-pillar h3 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 22px;
+      letter-spacing: 0.06em;
+      margin-bottom: 10px;
+      font-weight: 400;
+    }
+    .eff-pillar p {
+      font-size: 13px;
+      line-height: 1.65;
+      color: rgba(240,237,232,0.7);
+    }
+
+    /* §2 CFD */
+    .cfd {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr;
+      gap: 64px;
+      align-items: center;
+    }
+    .cfd-img {
+      border-radius: 6px;
+      overflow: hidden;
+      background: var(--surface);
+    }
+    .cfd-img img { width: 100%; display: block; }
+    .cfd-list {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 24px;
+    }
+    .cfd-list li {
+      padding: 14px 0;
+      border-top: 1px solid var(--border);
+      font-size: 14px;
+      letter-spacing: 0.02em;
+      color: rgba(240,237,232,0.85);
+    }
+    .cfd-list li:last-child { border-bottom: 1px solid var(--border); }
+    .cfd-list li strong { color: var(--text); font-weight: 400; }
+    .cfd-note { font-size: 12px; color: var(--text-muted); line-height: 1.6; }
+
+    /* §3 Number + Custom Text preview */
+    .preview-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+    }
+    .preview-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .preview-card img {
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      object-fit: cover;
+      display: block;
+    }
+    .preview-body { padding: 28px; }
+    .preview-body h3 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 28px;
+      letter-spacing: 0.06em;
+      margin-bottom: 12px;
+      font-weight: 400;
+    }
+    .preview-body p {
+      font-size: 13px;
+      line-height: 1.7;
+      color: rgba(240,237,232,0.7);
+    }
+    .preview-body ul {
+      list-style: none;
+      padding: 14px 0 0;
+      margin: 0;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .preview-body ul li { padding: 4px 0; }
+    .preview-body ul li::before { content: "•  "; color: var(--red); }
+
+    /* §4 100 Years timeline (horizontal scroll) */
+    .timeline {
+      display: flex;
+      gap: 24px;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      padding: 4px 8vw 24px;
+      margin: 0 -8vw;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255,255,255,0.18) transparent;
+    }
+    .timeline::-webkit-scrollbar { height: 6px; }
+    .timeline::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); border-radius: 3px; }
+    .tl-card {
+      flex: 0 0 320px;
+      scroll-snap-align: start;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .tl-card.featured { border-color: var(--red); box-shadow: 0 0 0 1px var(--red) inset; }
+    .tl-card img {
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      object-fit: cover;
+      background: #000;
+    }
+    .tl-card-body { padding: 20px 22px 24px; }
+    .tl-year {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 28px;
+      letter-spacing: 0.04em;
+      color: var(--text);
+    }
+    .tl-card.featured .tl-year { color: var(--red); }
+    .tl-name {
+      font-size: 12px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin: 6px 0 12px;
+    }
+    .tl-desc {
+      font-size: 12.5px;
+      line-height: 1.6;
+      color: rgba(240,237,232,0.72);
+    }
+
+    @media (max-width: 860px) {
+      .story { padding: 64px 6vw; }
+      .story-lead { margin-bottom: 36px; font-size: 14px; }
+      .eff-icons { grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 40px; }
+      .eff-icon img { max-width: 110px; }
+      .eff-icon-label { font-size: 11px; letter-spacing: 0.04em; }
+      .eff-hero { margin-bottom: 36px; }
+      .eff-hero img { height: clamp(200px, 38vh, 360px); }
+      .eff-pillars { grid-template-columns: 1fr 1fr; gap: 20px; }
+      .eff-pillar h3 { font-size: 19px; }
+      .cfd { grid-template-columns: 1fr; gap: 28px; }
+      .preview-grid { grid-template-columns: 1fr; gap: 20px; }
+      .preview-body { padding: 22px; }
+      .preview-body h3 { font-size: 24px; }
+      .tl-card { flex-basis: 78vw; }
+      .timeline { margin: 0 -6vw; padding: 4px 6vw 24px; }
+    }
+
+    /* ──── Small phones (≤480px) ──── */
+    @media (max-width: 480px) {
+      /* Configurator panel: tighter padding so things breathe */
+      .panel-header { padding: 24px 20px 16px; }
+      .panel-header-title { font-size: 28px; }
+      .config-section { padding: 20px; }
+      .config-section.size-section { padding: 12px 20px; }
+      .config-summary { padding: 16px 20px; }
+      .panel-cta { padding: 16px 20px 20px; }
+
+      /* Native form controls — avoid iOS auto-zoom on focus by using 16px */
+      .size-select { font-size: 16px; padding: 10px 30px 10px 12px; }
+
+      /* Wheel grid: 3 cols already; just tighter gap */
+      .wheel-grid { gap: 10px; }
+
+      /* Larger tap targets on buttons */
+      .btn-primary { padding: 16px; }
+      .btn-secondary { padding: 15px; }
+
+      /* Payments row — center, allow wrap into 2 lines neatly */
+      .payments { padding: 14px 20px 6px; }
+      .payments-grid { gap: 5px; justify-content: center; }
+      .payments-grid img { height: 20px; }
+
+      /* Accordion — slightly bigger touch row */
+      .accordions { padding: 4px 20px 24px; }
+      .accordion-header { padding: 16px 0; font-size: 11.5px; letter-spacing: 0.1em; }
+      .accordion-body { font-size: 12.5px; }
+
+      /* Section nav — single horizontal scroll strip, smaller CTA */
+      .section-nav-inner { padding: 8px 4vw; gap: 8px; }
+      .nav-links { gap: 2px; }
+      .nav-link { padding: 8px 10px; font-size: 9.5px; letter-spacing: 0.12em; }
+      .nav-cta { padding: 8px 14px; font-size: 9.5px; letter-spacing: 0.14em; gap: 6px; }
+      .nav-cta-arrow { width: 10px; height: 10px; }
+
+      /* Story sections */
+      .story { padding: 56px 6vw; }
+      .story-eyebrow { font-size: 10px; letter-spacing: 0.24em; }
+      .story-title { font-size: 32px; }
+      .story-lead { font-size: 13.5px; margin-bottom: 28px; }
+
+      /* Efficiency: keep 3 icons per row, smaller */
+      .eff-icons { grid-template-columns: repeat(3, 1fr); gap: 12px; }
+      .eff-icon { gap: 10px; }
+      .eff-icon img { max-width: 86px; }
+      .eff-icon-label { font-size: 10px; }
+
+      /* Pillars: single column reads better on tiny screens */
+      .eff-pillars { grid-template-columns: 1fr; gap: 18px; }
+      .eff-pillar h3 { font-size: 18px; }
+
+      /* CFD list compact */
+      .cfd-list li { padding: 12px 0; font-size: 13px; }
+
+      /* Preview cards a bit tighter */
+      .preview-body { padding: 18px 20px 22px; }
+      .preview-body h3 { font-size: 22px; }
+
+      /* Timeline cards a touch narrower so a sliver of the next peeks in */
+      .tl-card { flex-basis: 72vw; }
+      .tl-card-body { padding: 16px 18px 20px; }
+      .tl-year { font-size: 24px; }
+      .tl-name { font-size: 10.5px; letter-spacing: 0.12em; }
+      .tl-desc { font-size: 12px; }
+    }
+
+  </style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ── Stage ── -->
+  <section class="stage">
+    <div class="stage-bg"></div>
+    <div class="stage-floor"></div>
+
+    <div class="stage-label">
+      <div class="stage-label-model">911 McLaren S</div>
+      <div class="stage-label-sub">2026 · Coupé</div>
+    </div>
+
+    <img id="introLastFrame" src="public/last-frame.jpg" alt="">
+
+    <video id="introVideo" autoplay muted playsinline>
+      <source src="video.mp4" type="video/mp4">
+    </video>
+
+    <div class="car-img-wrapper" id="carStage">
+      <!-- Images injected by JS -->
+    </div>
+
+    <!-- Wheel spin overlay (rear wheel only) -->
+    <img class="wheel-spin-overlay" id="wheelOverlayRear"  alt="" src="">
+    <!-- Front wheel overlay (static, no spin) -->
+    <img class="wheel-spin-overlay" id="wheelOverlayFront" alt="" src="">
+
+    <div class="stage-loading" id="stageLoading">
+      <div class="loader-ring"></div>
+    </div>
+
+  </section>
+
+  <!-- ── Config Panel ── -->
+  <aside class="panel">
+
+    <div class="panel-header">
+      <div class="panel-header-eyebrow">Configure Yours</div>
+      <div class="panel-header-title">911 McLaren S</div>
+      <div class="panel-header-price">Starting at <span>$133,000</span></div>
+    </div>
+
+    <!-- Exterior Color -->
+    <div class="config-section">
+      <div class="section-label">Exterior Color</div>
+      <div class="color-grid" id="colorGrid"></div>
+    </div>
+
+    <!-- Wheel Size -->
+    <div class="config-section size-section">
+      <div class="size-row">
+        <div class="size-row-label">Wheel Size</div>
+        <select id="sizeSelect" class="size-select" aria-label="Wheel size">
+          <option value="20">20"</option>
+          <option value="21">21"</option>
+          <option value="22">22"</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Wheels -->
+    <div class="config-section">
+      <div class="section-label">Wheels</div>
+      <div class="wheel-grid" id="wheelGrid"></div>
+      <div class="wheel-selected-label" id="wheelSelectedLabel"></div>
+    </div>
+
+    <!-- Reference Image -->
+    <div class="config-section">
+      <div class="section-label">Reference Image</div>
+
+      <div class="upload-zone" id="uploadZone">
+        <div class="upload-zone-icon">↑</div>
+        <div class="upload-zone-text">
+          <strong>Drop an image here</strong><br>
+          or click to browse
+        </div>
+      </div>
+
+      <div class="upload-error" id="uploadError"></div>
+
+      <div class="upload-success" id="uploadSuccess">
+        <span class="upload-success-icon">✓</span>
+        <span class="upload-success-name" id="uploadFileName"></span>
+        <button class="upload-change-btn" id="uploadChangeBtn">Change</button>
+      </div>
+
+      <input type="file" id="uploadInput" accept="image/*" style="display:none">
+    </div>
+
+    <!-- Summary -->
+    <div class="config-summary" id="configSummary"></div>
+
+    <!-- CTA -->
+    <div class="panel-cta">
+      <button class="btn-primary">Add to Cart</button>
+      <button class="btn-secondary">Shop Now</button>
+    </div>
+
+    <!-- Payments -->
+    <div class="payments">
+      <div class="payments-grid">
+        <img alt="American Express" src="https://cdn.simpleicons.org/americanexpress/2E77BB">
+        <img alt="Apple Pay"        src="https://cdn.simpleicons.org/applepay/000000">
+        <img alt="Diners Club"      src="https://cdn.simpleicons.org/dinersclub/0079BE">
+        <img alt="Discover"         src="https://cdn.simpleicons.org/discover/FF6000">
+        <img alt="Meta Pay"         src="https://cdn.simpleicons.org/meta/0467DF">
+        <img alt="Google Pay"       src="https://cdn.simpleicons.org/googlepay/4285F4">
+        <img alt="Mastercard"       src="https://cdn.simpleicons.org/mastercard/EB001B">
+        <img alt="PayPal"           src="https://cdn.simpleicons.org/paypal/003087">
+        <img alt="Shop Pay"         src="https://cdn.simpleicons.org/shopify/5A31F4">
+        <img alt="Venmo"            src="https://cdn.simpleicons.org/venmo/008CFF">
+        <img alt="Visa"             src="https://cdn.simpleicons.org/visa/1A1F71">
+      </div>
+    </div>
+
+    <!-- Accordions -->
+    <div class="accordions" id="accordions">
+      <div class="accordion-item">
+        <button class="accordion-header" type="button">
+          <span>Product Use Disclaimer</span>
+          <span class="chev">▾</span>
+        </button>
+        <div class="accordion-body">
+          <div class="accordion-body-inner">
+            All wheel and trim renderings on this configurator are for visualization only.
+            Final fitment, load rating, and offset must be verified against your vehicle's
+            VIN before installation. Aerodisc wheels are engineered for street use; off-road,
+            track, or competition use voids warranty unless explicitly approved in writing.
+          </div>
+        </div>
+      </div>
+      <div class="accordion-item">
+        <button class="accordion-header" type="button">
+          <span>Shipping Policy</span>
+          <span class="chev">▾</span>
+        </button>
+        <div class="accordion-body">
+          <div class="accordion-body-inner">
+            Orders ship from our Los Angeles warehouse within 3–5 business days.
+            Domestic ground delivery is free on orders over $1,500; expedited 2-day and
+            overnight options are available at checkout. International orders typically
+            arrive in 8–14 business days. Tracking is emailed once the carrier scans the
+            package.
+          </div>
+        </div>
+      </div>
+      <div class="accordion-item">
+        <button class="accordion-header" type="button">
+          <span>Returns &amp; Refund Policy</span>
+          <span class="chev">▾</span>
+        </button>
+        <div class="accordion-body">
+          <div class="accordion-body-inner">
+            Unmounted, unmodified wheels in original packaging may be returned within 30
+            days of delivery for a full refund less return shipping. Custom-finished or
+            color-matched orders are final sale. Defects covered by warranty are repaired
+            or replaced at no cost — open a claim with your order number to start the process.
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </aside>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════
+     STORY SECTIONS (below configurator) — inspired by haloblk.com
+     ════════════════════════════════════════════════════════════════════ -->
+
+<!-- Sticky section nav -->
+<nav class="section-nav" id="sectionNav" aria-label="Page sections">
+  <div class="section-nav-inner">
+    <div class="nav-brand">
+      <span class="nav-brand-name">911 McLaren S</span>
+      <span class="nav-brand-price">From <strong>$133,000</strong></span>
+    </div>
+    <div class="nav-links" id="navLinks">
+      <a class="nav-link" href="#sec-performance" data-target="sec-performance">Performance</a>
+      <a class="nav-link" href="#sec-cfd"         data-target="sec-cfd">Aero · CFD</a>
+      <a class="nav-link" href="#sec-personalize" data-target="sec-personalize">Personalize</a>
+      <a class="nav-link" href="#sec-heritage"    data-target="sec-heritage">Heritage</a>
+    </div>
+    <button class="nav-cta" id="navCta" type="button" aria-label="Add to cart">
+      Add to Cart
+      <span class="nav-cta-arrow" aria-hidden="true"></span>
+    </button>
+  </div>
+</nav>
+
+<!-- §1 Enhance Efficiency -->
+<section class="story" id="sec-performance">
+  <div class="story-eyebrow">Performance</div>
+  <h2 class="story-title">Enhance Your Drive's Efficiency</h2>
+  <p class="story-lead">
+    Aerodisc wheels are engineered to do more than turn heads. Every face,
+    every edge is shaped for the air it cuts through — pushing range, quiet,
+    and stability further than the wheel they replace.
+  </p>
+
+  <div class="eff-icons">
+    <div class="eff-icon">
+      <img src="https://www.haloblk.com/cdn/shop/files/preview_images/f69f7c9d6444451ba7fcebc33aeccb28.thumbnail.0000000000_small.jpg" alt="Range Up to 10%">
+      <div class="eff-icon-label">Range Up to 10%</div>
+    </div>
+    <div class="eff-icon">
+      <img src="https://www.haloblk.com/cdn/shop/files/3_75c4c6e9-7f16-48a8-862f-b1866f8aa783.jpg?v=1757496306&width=1000" alt="Fits Over 20+ Vehicles">
+      <div class="eff-icon-label">Fits 20+ Vehicles</div>
+    </div>
+    <div class="eff-icon">
+      <img src="https://www.haloblk.com/cdn/shop/files/2_6b694edf-c9a9-44b8-b620-f9118c282359.jpg?v=1757496285&width=1000" alt="Rim Protection">
+      <div class="eff-icon-label">Rim Protection</div>
+    </div>
+    <div class="eff-icon">
+      <img src="https://www.haloblk.com/cdn/shop/files/preview_images/dc937577890c49f69c6260fd1870f96a.thumbnail.0000000000_small.jpg" alt="30-Second Install">
+      <div class="eff-icon-label">30-Second Install</div>
+    </div>
+    <div class="eff-icon">
+      <img src="https://www.haloblk.com/cdn/shop/files/14_2a09c214-1afc-453f-8e07-fbf9af03ade0.jpg?v=1757500635&width=2000" alt="Available in Black & White">
+      <div class="eff-icon-label">Black &amp; White</div>
+    </div>
+  </div>
+
+  <div class="eff-hero">
+    <img src="https://www.haloblk.com/cdn/shop/files/20260415-160557.jpg?v=1776240482&width=4000" alt="Aerodynamic wheel on the road">
+  </div>
+
+  <div class="eff-pillars">
+    <div class="eff-pillar">
+      <h3>Extended Range</h3>
+      <p>Optimized airflow helps increase up to 10% range, letting you go farther on every charge.</p>
+    </div>
+    <div class="eff-pillar">
+      <h3>Smoother Drive</h3>
+      <p>Improvement in aerodynamics, reducing drag for a more efficient ride.</p>
+    </div>
+    <div class="eff-pillar">
+      <h3>Quieter Rides</h3>
+      <p>Precision-engineered to minimize wind noise for a peaceful journey.</p>
+    </div>
+    <div class="eff-pillar">
+      <h3>Make It Yours</h3>
+      <p>Pick any 00–99 and add optional engraving (up to 30 characters). Your number, your story.</p>
+    </div>
+  </div>
+</section>
+
+<!-- §2 CFD-Proven Efficiency -->
+<section class="story" id="sec-cfd">
+  <div class="story-eyebrow">Aero · CFD</div>
+  <h2 class="story-title">CFD-Proven Efficiency</h2>
+  <p class="story-lead">
+    Computational fluid dynamics confirms what you feel at speed —
+    a calmer wheel well, a tighter wake, and measurably less drag.
+  </p>
+
+  <div class="cfd">
+    <div class="cfd-img">
+      <img src="https://www.haloblk.com/cdn/shop/files/20251030-120149.jpg?v=1761796935&width=2000" alt="CFD wake visualization">
+    </div>
+    <div>
+      <ul class="cfd-list">
+        <li><strong>CFD comparison:</strong> Aerodisc vs. exposed wheels</li>
+        <li><strong>Smooth, closed face</strong> calms wheel-well turbulence</li>
+        <li><strong>Tighter rear wake</strong> means lower overall drag</li>
+        <li><strong>At speed:</strong> better efficiency and stability</li>
+      </ul>
+      <p class="cfd-note">
+        Up to <strong>10%</strong> saving in specific high-speed crosswinds;
+        results vary by speed, yaw, tires, road.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- §3 Number + Custom Text -->
+<section class="story" id="sec-personalize">
+  <div class="story-eyebrow">Personalize</div>
+  <h2 class="story-title">00–99. A–Z. Yours.</h2>
+  <p class="story-lead">
+    Pick a number, add a phrase. Each Aerodisc cap can be engraved to
+    carry a story — your debut date, your race start, your jersey, your code.
+  </p>
+
+  <div class="preview-grid">
+    <div class="preview-card">
+      <img src="https://www.haloblk.com/cdn/shop/files/20250928-101206.jpg?v=1759025575&width=1500" alt="00-99 Number preview">
+      <div class="preview-body">
+        <h3>00–99 Number Preview</h3>
+        <p>Choose any two-digit number 00–99 and we'll render it in our signature industrial typeface, applied to the rear caps only.</p>
+        <ul>
+          <li>Same number on both rear caps (fronts stay clean)</li>
+          <li>Leading zeros supported — 00, 01, 07, 09…</li>
+          <li>Bold, legible from 30 feet away</li>
+        </ul>
+      </div>
+    </div>
+    <div class="preview-card">
+      <img src="https://www.haloblk.com/cdn/shop/files/20260511-144913.jpg?v=1778482214&width=1080" alt="Custom Text alphabet preview">
+      <div class="preview-body">
+        <h3>Custom Text Preview</h3>
+        <p>Preview the full A–Z character set in the same industrial face. Engrave up to 30 characters — a vow, a belief, an inside joke.</p>
+        <ul>
+          <li>Up to 30 characters, spaces and punctuation included</li>
+          <li>Designed for expression, not decoration</li>
+          <li>Rides with you, miles beyond the ordinary</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- §4 100 Years of Wheel Covers -->
+<section class="story" id="sec-heritage">
+  <div class="story-eyebrow">Heritage</div>
+  <h2 class="story-title">100 Years of Wheel Covers</h2>
+  <p class="story-lead">
+    From Bugatti's first center-lock hub to Cybertruck's polygonal aero —
+    a century of engineering shaped what your Aerodisc rolls on today.
+  </p>
+
+  <div class="timeline">
+    <article class="tl-card">
+      <img src="https://www.haloblk.com/cdn/shop/files/1_d5ac8753-062b-4a2c-b020-40480b6a88e8.png?v=1755224306&width=1200" alt="Bugatti Type 35">
+      <div class="tl-card-body">
+        <div class="tl-year">1924</div>
+        <div class="tl-name">Bugatti Type 35</div>
+        <p class="tl-desc">First race car with lightweight aluminum covers + center-lock hub. Pit stops dropped from 5 minutes to under one.</p>
+      </div>
+    </article>
+    <article class="tl-card">
+      <img src="https://www.haloblk.com/cdn/shop/files/2_1b8366c2-562c-422e-92a8-3000b8593bc0.png?v=1755224465&width=1200" alt="Cadillac & Packard">
+      <div class="tl-card-body">
+        <div class="tl-year">1930s</div>
+        <div class="tl-name">Cadillac &amp; Packard</div>
+        <p class="tl-desc">Full chrome hubcaps turned wheel covers into "moving jewelry" — function gave way to fashion and brand prestige.</p>
+      </div>
+    </article>
+    <article class="tl-card">
+      <img src="https://www.haloblk.com/cdn/shop/files/3_08406939-69e8-49b8-87cb-aae1bed31321.png?v=1755224564&width=1200" alt="Chevrolet Caprice">
+      <div class="tl-card-body">
+        <div class="tl-year">1970s</div>
+        <div class="tl-name">Chevrolet Caprice</div>
+        <p class="tl-desc">Injection-molded plastic put stylish, affordable wheel customization into every driveway in America.</p>
+      </div>
+    </article>
+    <article class="tl-card">
+      <img src="https://www.haloblk.com/cdn/shop/files/4_bee4a07f-9e4c-44d4-8381-381d7ae7d624.png?v=1755224563&width=1200" alt="Porsche 935 & Ferrari 512 BBLM">
+      <div class="tl-card-body">
+        <div class="tl-year">1979</div>
+        <div class="tl-name">Porsche 935 · Ferrari 512 BBLM</div>
+        <p class="tl-desc">Turbofan covers evacuated brake heat at Le Mans. Spinning at full throttle, they became icons of raw performance.</p>
+      </div>
+    </article>
+    <article class="tl-card">
+      <img src="https://www.haloblk.com/cdn/shop/files/6_18d22aff-98eb-4a7a-b31c-9e7408a56e55.png?v=1755224561&width=1200" alt="Tesla Model 3 Aero">
+      <div class="tl-card-body">
+        <div class="tl-year">2017</div>
+        <div class="tl-name">Tesla Model 3 Aero</div>
+        <p class="tl-desc">Functional aero caps returned to mass-market EVs, delivering a 2–4% range boost — and a debate about looks vs. miles.</p>
+      </div>
+    </article>
+    <article class="tl-card">
+      <img src="https://www.haloblk.com/cdn/shop/files/7_3d559d68-9575-4933-a043-6f7aec6e2c2d.png?v=1755224564&width=1200" alt="Koenigsegg Jesko">
+      <div class="tl-card-body">
+        <div class="tl-year">2020</div>
+        <div class="tl-name">Koenigsegg Jesko</div>
+        <p class="tl-desc">First hypercar to fuse center-lock hubs with carbon-fiber turbofans — engineering art at peak velocity.</p>
+      </div>
+    </article>
+    <article class="tl-card">
+      <img src="https://www.haloblk.com/cdn/shop/files/8_1ce3d302-fe8a-41d4-a291-3469fef50948.png?v=1755224563&width=1200" alt="Bugatti Bolide">
+      <div class="tl-card-body">
+        <div class="tl-year">2020</div>
+        <div class="tl-name">Bugatti Bolide</div>
+        <p class="tl-desc">The first wheel cover born from the body itself — ducted, seamless, sculpted into the aero shell.</p>
+      </div>
+    </article>
+    <article class="tl-card">
+      <img src="https://www.haloblk.com/cdn/shop/files/9_a7f4bacb-aeb5-4563-9dfc-a1425fa67467.png?v=1755224561&width=1200" alt="McLaren Speedtail">
+      <div class="tl-card-body">
+        <div class="tl-year">2021</div>
+        <div class="tl-name">McLaren Speedtail</div>
+        <p class="tl-desc">Fully enclosed front covers tamed lift at near-400 km/h. The wheel didn't slice the air — it joined the sculpture.</p>
+      </div>
+    </article>
+    <article class="tl-card">
+      <img src="https://www.haloblk.com/cdn/shop/files/11_d9c17101-30d2-42aa-bbae-df85b4637d26.png?v=1755224564&width=1200" alt="F1 Closed Hubs">
+      <div class="tl-card-body">
+        <div class="tl-year">2022</div>
+        <div class="tl-name">F1 Closed Hubs</div>
+        <p class="tl-desc">Closed wheel hubs became regulation across all teams — once experimental, now codified into the sport.</p>
+      </div>
+    </article>
+    <article class="tl-card">
+      <img src="https://www.haloblk.com/cdn/shop/files/12_4d7074e3-9e58-4ff0-935c-e3d9ad59bee9.png?v=1755224563&width=1200" alt="Tesla Cybertruck">
+      <div class="tl-card-body">
+        <div class="tl-year">2023</div>
+        <div class="tl-name">Tesla Cybertruck</div>
+        <p class="tl-desc">Polygonal closed-face caps fused drag reduction with geometry-as-identity — a wheel cover that became a meme.</p>
+      </div>
+    </article>
+    <article class="tl-card">
+      <img src="https://www.haloblk.com/cdn/shop/files/20250819-144220.jpg?v=1755585759&width=1200" alt="Tesla Cybercab">
+      <div class="tl-card-body">
+        <div class="tl-year">2024</div>
+        <div class="tl-name">Tesla Cybercab</div>
+        <p class="tl-desc">Fully enclosed, lightweight covers engineered for autonomous fleet duty — function without fanfare.</p>
+      </div>
+    </article>
+    <article class="tl-card featured">
+      <img src="https://www.haloblk.com/cdn/shop/files/13_27bc9fc5-7300-4260-b50d-996db8e5f4b0.png?v=1755834835&width=1200" alt="Aerodisc 2025">
+      <div class="tl-card-body">
+        <div class="tl-year">2025</div>
+        <div class="tl-name">Aerodisc · The Cultural Apex</div>
+        <p class="tl-desc">A civilian center-lock hub with interchangeable shells — Bugatti's 1924 race-tech, reimagined for personal expression.</p>
+      </div>
+    </article>
+  </div>
+</section>
+
+<script>
+// ── IOD URL Builder ──────────────────────────────────────────────────────────
+
+const BASE_OPTIONS = [
+  "1G8","3S4","4F6","4GP","4UB","5XX",
+  "6I3","6NQ","7AL","9P8","9ZE","EM2","G1F",
+  "IV2","IW3","LGTDRL","PH","Q5A","QR9","QU8","UP9","VC2","Z1S"
+];
+
+function buildIodHash(colorCode, wheelCode, cameraId) {
+  const options = [...BASE_OPTIONS, colorCode, wheelCode].sort();
+  const config = {
+    config: {
+      animations: [],
+      camera: { id: cameraId, options: { variant: "desktop" } },
+      environment: { id: "Oasis", options: {} },
+      lighting: { id: "DAY", options: {} },
+      product: {
+        id: "9921B2",
+        options: { config: options, country: "US", modelYear: 2026 }
+      }
+    },
+    settings: { format: "jpeg", transparent: false }
+  };
+  return LZString.compressToEncodedURIComponent(JSON.stringify(config));
+}
+
+function iodUrl(colorCode, wheelCode, cameraId) {
+  const hash = buildIodHash(colorCode, wheelCode, cameraId);
+  return `https://prs.porsche.com/iod/image/US/9921B2/1/${hash}?clientId=icc`;
+}
+
+function thumbUrl(colorCode, wheelCode, cameraId) {
+  const hash = buildIodHash(colorCode, wheelCode, cameraId);
+  return `https://prs.porsche.com/iod/thumbnail/US/9921B2/1/${hash}?clientId=icc`;
+}
+
+// ── Config Data ──────────────────────────────────────────────────────────────
+
+const COLORS = [
+  {
+    id: "0Q",
+    name: "Chalk",
+    type: "Solid",
+    hex: "#E4E0D5",
+    metallic: false,
+    price: 0,
+    img: "public/t-white.jpeg"
+  },
+  {
+    id: "G1",
+    name: "Guards Red",
+    type: "Solid",
+    hex: "#B8001F",
+    metallic: false,
+    price: 0,
+    img: "public/t-red.jpeg"
+  },
+  {
+    id: "45",
+    name: "Gentian Blue",
+    type: "Metallic",
+    hex: "#1C3D6E",
+    metallic: true,
+    price: 820,
+    img: "public/t-blue.jpeg"
+  }
+];
+
+const WHEELS = [
+  { id: "w1", sku: "HCN-1001", name: "Crimson Vortex", size: 20, price:    0, thumb: "public/wheel-1.png" },
+  { id: "w2", sku: "HCN-1002", name: "Stealth Rotor",  size: 20, price:  820, thumb: "public/wheel-2.png" },
+  { id: "w3", sku: "HCN-1003", name: "Arctic Camo",    size: 20, price:  820, thumb: "public/wheel-3.png" },
+  { id: "w4", sku: "HCN-1004", name: "Hex Carbon",     size: 21, price: 1640, thumb: "public/wheel-4.png" },
+  { id: "w5", sku: "HCN-1005", name: "Solar Flare",    size: 21, price: 1640, thumb: "public/wheel-5.png" },
+  { id: "w6", sku: "HCN-1006", name: "Crimson Web",    size: 21, price: 2200, thumb: "public/wheel-6.png" },
+  { id: "w7", sku: "HCN-1007", name: "Onyx Stealth",   size: 22, price: 2840, thumb: "public/wheel-7.png" },
+  { id: "w8", sku: "HCN-1008", name: "Apex Striker",   size: 22, price: 2840, thumb: "public/wheel-8.png" },
+  { id: "w9", sku: "HCN-1009", name: "Inferno Halo",   size: 22, price: 3500, thumb: "public/wheel-9.png" }
+];
+
+// ── State ────────────────────────────────────────────────────────────────────
+
+const SIDE_PERSP_ID = "ext-low-side-left";
+
+const state = {
+  color: "0Q",
+  wheel: null,
+  size: 20,
+  persp: SIDE_PERSP_ID
+};
+
+// Preloaded Image cache
+const imgCache = {};
+
+// ── DOM refs ─────────────────────────────────────────────────────────────────
+
+const carStage = document.getElementById("carStage");
+const stageLoading = document.getElementById("stageLoading");
+const colorGrid = document.getElementById("colorGrid");
+const wheelGrid = document.getElementById("wheelGrid");
+const configSummary = document.getElementById("configSummary");
+
+// ── Build color grid ─────────────────────────────────────────────────────────
+
+COLORS.forEach(c => {
+  const opt = document.createElement("div");
+  opt.className = "color-option" + (c.id === state.color ? " active" : "");
+  opt.dataset.id = c.id;
+  opt.innerHTML = `
+    <div class="color-swatch${c.metallic ? " metallic" : ""}" style="background:${c.hex}"></div>
+    <div class="color-info">
+      <div class="color-name">${c.name}</div>
+      <div class="color-type">${c.type}${c.price > 0 ? ` · $${c.price.toLocaleString()}` : ""}</div>
+    </div>
+    <div class="color-check"><div class="color-check-dot"></div></div>
+  `;
+  opt.addEventListener("click", () => {
+    state.color = c.id;
+    document.querySelectorAll(".color-option").forEach(el => el.classList.remove("active"));
+    opt.classList.add("active");
+    showCar();
+    renderSummary();
+  });
+  colorGrid.appendChild(opt);
+});
+
+// ── Build wheel grid ─────────────────────────────────────────────────────────
+
+function renderWheelGrid() {
+  wheelGrid.innerHTML = "";
+  const visible = WHEELS.filter(w => w.size === state.size);
+
+  // If current selection isn't in this size group, clear it
+  if (state.wheel && !visible.some(w => w.id === state.wheel)) {
+    state.wheel = null;
+  }
+
+  visible.forEach(w => {
+    const opt = document.createElement("div");
+    opt.className = "wheel-option" + (w.id === state.wheel ? " active" : "");
+    opt.dataset.id = w.id;
+    opt.title = `${w.name}${w.price > 0 ? ` · $${w.price.toLocaleString()}` : ""}`;
+
+    opt.innerHTML = `
+      <img class="wheel-thumb" src="${w.thumb}" alt="${w.name}" onerror="this.style.opacity='0'">
+    `;
+
+    opt.addEventListener("click", () => {
+      state.wheel = w.id;
+      document.querySelectorAll(".wheel-option").forEach(el => el.classList.remove("active"));
+      opt.classList.add("active");
+      renderWheelLabel();
+      showCar();
+      renderSummary();
+      updateSpinWheel();
+    });
+    wheelGrid.appendChild(opt);
+  });
+}
+renderWheelGrid();
+
+// Size selector
+const sizeSelect = document.getElementById("sizeSelect");
+sizeSelect.value = String(state.size);
+sizeSelect.addEventListener("change", () => {
+  state.size = parseInt(sizeSelect.value, 10);
+  renderWheelGrid();
+  renderWheelLabel();
+  showCar();
+  renderSummary();
+  updateSpinWheel();
+});
+
+const wheelSelectedLabel = document.getElementById("wheelSelectedLabel");
+function renderWheelLabel() {
+  const w = WHEELS.find(x => x.id === state.wheel);
+  if (!w) {
+    wheelSelectedLabel.innerHTML = `<span class="price">Select a wheel</span>`;
+    return;
+  }
+  wheelSelectedLabel.innerHTML = `
+    ${w.name}<span class="price">${w.price > 0 ? `+$${w.price.toLocaleString()}` : "Included"}</span>
+    <div class="sku">SKU · ${w.sku}</div>
+  `;
+}
+renderWheelLabel();
+
+
+// ── Car image display ─────────────────────────────────────────────────────────
+
+function cacheKey(color, wheel, persp) {
+  return `${color}_${wheel}_${persp}`;
+}
+
+function getOrCreateImg(color, wheel, persp) {
+  const key = cacheKey(color, wheel, persp);
+  if (imgCache[key]) return imgCache[key];
+
+  const img = document.createElement("img");
+  img.className = "car-img";
+  img.alt = `Porsche 911 - ${color} - ${wheel}`;
+  const colorObj = COLORS.find(c => c.id === color);
+  img.src = colorObj && colorObj.img ? colorObj.img : iodUrl(color, wheel, persp);
+
+  img.onload = () => {
+    // if this is the current config, show it
+    if (key === cacheKey(state.color, state.wheel, state.persp)) {
+      revealCurrent(key);
+    }
+  };
+
+  img.onerror = () => {
+    img.dataset.failed = "1";
+    if (key === cacheKey(state.color, state.wheel, state.persp)) {
+      stageLoading.classList.remove("visible");
+    }
+  };
+
+  carStage.appendChild(img);
+  imgCache[key] = img;
+  return img;
+}
+
+let introActive = true;
+let lastFrameActive = true;
+const lastFrameEl = document.getElementById("introLastFrame");
+
+function dismissLastFrame() {
+  if (!lastFrameActive) return;
+  lastFrameActive = false;
+  lastFrameEl.style.opacity = "0";
+  lastFrameEl.addEventListener("transitionend", () => {
+    lastFrameEl.style.display = "none";
+  }, { once: true });
+}
+
+function revealCurrent(key) {
+  if (introActive) return;
+  dismissLastFrame();   // last-frame 与 IOD 图同步淡出/淡入
+  // Hide all
+  Object.entries(imgCache).forEach(([k, img]) => {
+    img.classList.remove("active");
+  });
+  // Show current
+  if (imgCache[key]) {
+    imgCache[key].classList.add("active");
+  }
+  stageLoading.classList.remove("visible");
+}
+
+function showCar() {
+  const { color, wheel, persp } = state;
+  const key = cacheKey(color, wheel, persp);
+
+  const img = getOrCreateImg(color, wheel, persp);
+
+  if (img.complete && !img.dataset.failed) {
+    revealCurrent(key);
+  } else {
+    // show loader, wait for onload
+    stageLoading.classList.add("visible");
+    // hide others immediately
+    Object.entries(imgCache).forEach(([k, i]) => {
+      if (k !== key) i.classList.remove("active");
+    });
+  }
+
+  // Preload adjacent combos
+  preloadNeighbors(color, wheel, persp);
+}
+
+function preloadNeighbors(color, wheel, persp) {
+  COLORS.forEach(c => {
+    WHEELS.forEach(w => {
+      // preload all on current perspective
+      getOrCreateImg(c.id, w.id, persp);
+    });
+  });
+}
+
+// ── Summary ──────────────────────────────────────────────────────────────────
+
+function renderSummary() {
+  const color = COLORS.find(c => c.id === state.color);
+  const wheel = WHEELS.find(w => w.id === state.wheel);
+
+  const basePrice = 133000;
+  const colorPrice = color?.price || 0;
+  const wheelPrice = wheel?.price || 0;
+  const total = basePrice + colorPrice + wheelPrice;
+
+  configSummary.innerHTML = `
+    <div class="summary-row">
+      <span class="summary-label">911 McLaren S Coupé</span>
+      <span class="summary-value">$${basePrice.toLocaleString()}</span>
+    </div>
+    <div class="summary-row">
+      <span class="summary-label">${color?.name || ""}</span>
+      <span class="summary-value">${colorPrice > 0 ? "$" + colorPrice.toLocaleString() : "Included"}</span>
+    </div>
+    <div class="summary-row">
+      <span class="summary-label">${wheel ? `${wheel.name} <em style="font-style:normal;color:var(--text-muted);font-size:10px;letter-spacing:0.15em;margin-left:6px;">${wheel.sku}</em>` : "Wheels"}</span>
+      <span class="summary-value">${wheel ? (wheelPrice > 0 ? "$" + wheelPrice.toLocaleString() : "Included") : "—"}</span>
+    </div>
+    <div class="summary-divider"></div>
+    <div class="summary-total">
+      <span class="summary-total-label">Total</span>
+      <span class="summary-total-price">$${total.toLocaleString()}</span>
+    </div>
+  `;
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+
+renderSummary();
+showCar();
+
+// ── Intro video → fade out → show car ────────────────────────────────────────
+
+(function () {
+  const video = document.getElementById("introVideo");
+  if (!video) return;
+
+  function endIntro() {
+    introActive = false;
+    lastFrameEl.style.opacity = "1";  // last-frame 淡入
+    video.classList.add("fade-out");   // 视频同步淡出
+    video.addEventListener("transitionend", () => {
+      video.style.display = "none";
+    }, { once: true });
+  }
+
+  video.addEventListener("ended", endIntro);
+
+  // 视频加载失败 → 直接跳过
+  video.addEventListener("error", () => {
+    introActive = false;
+    video.style.display = "none";
+  });
+})();
+
+// preload all color×wheel combos for the side view in background after a short delay
+setTimeout(() => {
+  COLORS.forEach(c => {
+    WHEELS.forEach(w => {
+      getOrCreateImg(c.id, w.id, SIDE_PERSP_ID);
+    });
+  });
+}, 1500);
+
+// ── Wheel Spin Mode ───────────────────────────────────────────────────────────
+
+const wheelOverlayR  = document.getElementById("wheelOverlayRear");
+const wheelOverlayF  = document.getElementById("wheelOverlayFront");
+const stageEl        = document.querySelector(".stage");
+
+// ── Rear-wheel overlay placement ────────────────────────────────────────────
+// Values are fractions of the underlying car image (1920×1080).
+// Tweak these three numbers to align with the rear wheel:
+//   REAR_CX → horizontal center (0=left edge, 1=right edge)
+//   REAR_CY → vertical   center (0=top,      1=bottom)
+//   REAR_R  → radius (fraction of image HEIGHT)
+const SIDE_RATIO = 1920 / 1080;
+let REAR_CX = 0.68;
+let REAR_CY = 0.57;
+let REAR_R  = 0.068;
+let FRONT_CX = 0.308;
+let FRONT_CY = 0.57;
+let FRONT_R  = 0.068;
+
+// Console tuning helper: tuneWheel(cx, cy, r) — pass any/all, undefined keeps current
+window.tuneWheel = (cx, cy, r) => {
+  if (cx !== undefined) REAR_CX = cx;
+  if (cy !== undefined) REAR_CY = cy;
+  if (r  !== undefined) REAR_R  = r;
+  positionWheelOverlays();
+  console.log(`REAR_CX=${REAR_CX}  REAR_CY=${REAR_CY}  REAR_R=${REAR_R}`);
+};
+window.tuneFrontWheel = (cx, cy, r) => {
+  if (cx !== undefined) FRONT_CX = cx;
+  if (cy !== undefined) FRONT_CY = cy;
+  if (r  !== undefined) FRONT_R  = r;
+  positionWheelOverlays();
+  console.log(`FRONT_CX=${FRONT_CX}  FRONT_CY=${FRONT_CY}  FRONT_R=${FRONT_R}`);
+};
+
+function positionWheelOverlays() {
+  const cw = stageEl.offsetWidth;
+  const ch = stageEl.offsetHeight;
+
+  // Compute rendered image bounds under object-fit:cover
+  let rW, rH, ox, oy;
+  if (cw / ch > SIDE_RATIO) {
+    rW = cw; rH = cw / SIDE_RATIO;
+    ox = 0;  oy = (ch - rH) / 2;
+  } else {
+    rH = ch; rW = ch * SIDE_RATIO;
+    ox = (cw - rW) / 2; oy = 0;
+  }
+
+  const cx = ox + REAR_CX * rW;
+  const cy = oy + REAR_CY * rH;
+  const r  = REAR_R  * rH;
+  wheelOverlayR.style.left   = (cx - r) + "px";
+  wheelOverlayR.style.top    = (cy - r) + "px";
+  wheelOverlayR.style.width  = (r * 2)  + "px";
+  wheelOverlayR.style.height = (r * 2)  + "px";
+
+  const fcx = ox + FRONT_CX * rW;
+  const fcy = oy + FRONT_CY * rH;
+  const fr  = FRONT_R  * rH;
+  wheelOverlayF.style.left   = (fcx - fr) + "px";
+  wheelOverlayF.style.top    = (fcy - fr) + "px";
+  wheelOverlayF.style.width  = (fr * 2)   + "px";
+  wheelOverlayF.style.height = (fr * 2)   + "px";
+}
+
+function updateSpinWheel() {
+  const activeWheel = WHEELS.find(w => w.id === state.wheel);
+  if (!activeWheel) {
+    wheelOverlayR.classList.remove("spinning");
+    wheelOverlayF.classList.remove("visible");
+    wheelOverlayR.src = "";
+    wheelOverlayF.src = "";
+    return;
+  }
+  wheelOverlayR.src = activeWheel.thumb;
+  wheelOverlayF.src = activeWheel.thumb;
+  positionWheelOverlays();
+  wheelOverlayR.classList.add("spinning");
+  wheelOverlayF.classList.add("visible");
+}
+
+// Spin activates when a wheel is selected; switching updates the overlay source
+document.getElementById("wheelGrid").addEventListener("click", updateSpinWheel);
+
+// Reposition on resize (only relevant once a wheel is chosen)
+window.addEventListener("resize", () => {
+  if (state.wheel) positionWheelOverlays();
+});
+
+// ── Reference Image Upload ────────────────────────────────────────────────────
+
+let uploadedFile = null;
+
+const uploadZone      = document.getElementById("uploadZone");
+const uploadInput     = document.getElementById("uploadInput");
+const uploadError     = document.getElementById("uploadError");
+const uploadSuccess   = document.getElementById("uploadSuccess");
+const uploadFileName  = document.getElementById("uploadFileName");
+const uploadChangeBtn = document.getElementById("uploadChangeBtn");
+
+const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+
+function handleFile(file) {
+  uploadError.classList.remove("visible");
+
+  if (!file.type.startsWith("image/")) {
+    uploadError.textContent = "Please upload an image file (JPG, PNG, WEBP, GIF).";
+    uploadError.classList.add("visible");
+    return;
+  }
+
+  if (file.size > MAX_SIZE) {
+    uploadError.textContent = "File exceeds 10 MB limit. Please choose a smaller image.";
+    uploadError.classList.add("visible");
+    return;
+  }
+
+  uploadedFile = file;
+  uploadFileName.textContent = file.name;
+  uploadZone.style.display = "none";
+  uploadSuccess.classList.add("visible");
+}
+
+function resetUpload() {
+  uploadedFile = null;
+  uploadInput.value = "";
+  uploadZone.style.display = "";
+  uploadSuccess.classList.remove("visible");
+  uploadError.classList.remove("visible");
+}
+
+uploadZone.addEventListener("click", () => uploadInput.click());
+uploadInput.addEventListener("change", () => {
+  if (uploadInput.files[0]) handleFile(uploadInput.files[0]);
+});
+
+uploadChangeBtn.addEventListener("click", resetUpload);
+
+uploadZone.addEventListener("dragover", (e) => {
+  e.preventDefault();
+  uploadZone.classList.add("drag-over");
+});
+
+uploadZone.addEventListener("dragleave", () => {
+  uploadZone.classList.remove("drag-over");
+});
+
+uploadZone.addEventListener("drop", (e) => {
+  e.preventDefault();
+  uploadZone.classList.remove("drag-over");
+  const file = e.dataTransfer.files[0];
+  if (file) handleFile(file);
+});
+
+// ── First-screen scroll routing ─────────────────────────────────────────────
+// When the user is on the first screen and the wheel is over the LEFT stage,
+// forward the scroll to the RIGHT panel until the panel finishes; only then
+// allow the page to advance to the story sections below. Wheel events that
+// originate over the panel itself are left to the browser (native scrolling +
+// overscroll chaining already does the right thing there).
+(function () {
+  const stage = document.querySelector(".stage");
+  const panel = document.querySelector(".panel");
+  if (!stage || !panel) return;
+
+  stage.addEventListener("wheel", (e) => {
+    // Once the page has scrolled past the first viewport, stop hijacking.
+    if (window.scrollY > 0) return;
+
+    const atBottom = panel.scrollTop + panel.clientHeight >= panel.scrollHeight - 1;
+    const atTop    = panel.scrollTop <= 0;
+
+    if (e.deltaY > 0 && !atBottom) {
+      e.preventDefault();
+      panel.scrollTop += e.deltaY;
+    } else if (e.deltaY < 0 && !atTop) {
+      e.preventDefault();
+      panel.scrollTop += e.deltaY;
+    }
+    // else: let the body scroll naturally (advance to the next section /
+    // already at the very top with panel also at top).
+  }, { passive: false });
+})();
+
+// ── Section nav (sticky) ────────────────────────────────────────────────────
+(function () {
+  const nav = document.getElementById("sectionNav");
+  const navLinks = Array.from(document.querySelectorAll(".nav-link"));
+  const navCta = document.getElementById("navCta");
+
+  // Smooth-scroll link clicks (offset for sticky nav height)
+  navLinks.forEach(link => {
+    link.addEventListener("click", (e) => {
+      e.preventDefault();
+      const id = link.dataset.target;
+      const target = document.getElementById(id);
+      if (!target) return;
+      const offset = nav.offsetHeight;
+      const y = target.getBoundingClientRect().top + window.pageYOffset - offset + 1;
+      window.scrollTo({ top: y, behavior: "smooth" });
+    });
+  });
+
+  // Add to Cart → back to first viewport (configurator)
+  navCta.addEventListener("click", () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+
+  // Active link tracking
+  const sections = navLinks
+    .map(l => document.getElementById(l.dataset.target))
+    .filter(Boolean);
+
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const id = entry.target.id;
+        navLinks.forEach(l => l.classList.toggle("active", l.dataset.target === id));
+      }
+    });
+  }, { rootMargin: "-40% 0px -55% 0px", threshold: 0 });
+
+  sections.forEach(s => io.observe(s));
+})();
+
+// ── Accordion ───────────────────────────────────────────────────────────────
+document.querySelectorAll("#accordions .accordion-item").forEach(item => {
+  const header = item.querySelector(".accordion-header");
+  const body = item.querySelector(".accordion-body");
+  header.addEventListener("click", () => {
+    const isOpen = item.classList.toggle("open");
+    body.style.maxHeight = isOpen ? body.scrollHeight + "px" : "0";
+  });
+});
+</script>
+
+</body>
+</html>
